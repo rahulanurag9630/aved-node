@@ -17,7 +17,19 @@ const io = createIO(server, {
   pingInterval: 1000 * 60 * 5,
   pingTimeout: 1000 * 60 * 3,
 });
+// Temporary ping route to keep Render free dyno alive
+app.get("/ping", (req, res) => {
+  res.send("🏓 Pong! Server is alive.");
+});
 
+// Self-ping to keep server alive (only in production)
+if (process.env.NODE_ENV === "production") {
+  setInterval(() => {
+    fetch("https://aved-node.onrender.com/ping")
+      .then((res) => console.log("Self ping response:", res.status))
+      .catch((err) => console.error("Self ping error:", err));
+  }, 5 * 60 * 1000); // Every 5 minutes
+}
 import { userServices } from "../api/v1/services/user";
 const { findUser } = userServices;
 import { socketServices } from "../api/v1/services/socket";
