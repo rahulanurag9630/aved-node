@@ -1,0 +1,413 @@
+definitions:
+  securitySchemes:
+    tokenauth:
+      type: basic
+      description: bearer auth
+      name: Authorization
+      in: header
+    demouser:
+      type: basic
+  #-------------------------------------------------------------------
+  #---------------------------ADMIN----------------------------------
+  #-------------------------------------------------------------------
+  userSignup:
+    required:
+      - email
+      - javaUID
+    properties:
+      email:
+        type: string
+      javaUID:
+        type: number
+
+  verifyOTP:
+    required:
+      - email
+      - otp
+    properties:
+      email:
+        type: string
+      otp:
+        type: string
+
+  verifyOTPUser:
+    required:
+      - mobileNumber
+      - otp
+    properties:
+      mobileNumber:
+        type: string
+      otp:
+        type: string      
+
+  resendOtp:
+    required:
+      - email
+    properties:
+      email:
+        type: string
+
+  resendOtpUser:
+    required:
+      - mobileNumber
+    properties:
+      mobileNumber:
+        type: string
+
+  forgotPassword:
+    required:
+      - email
+    properties:
+      email:
+        type: string
+
+  forgotPasswordUser:
+    required:
+      - mobileNumber
+    properties:
+      mobileNumber:
+        type: string      
+
+  resetPassword:
+    required:
+      - password
+      - confirmPassword
+    properties:
+      password:
+        type: string
+      confirmPassword:
+        type: string
+
+        
+  userLogin:
+    required:
+      - email
+      - password
+    properties:
+      email:
+        type: string
+      password: 
+        type: string
+
+  loginAdmin:
+    required:
+      - email
+      - password
+    properties:
+      email:
+        type: string
+      password: 
+        type: string
+          
+  updateProfile:
+    properties:
+      name:
+        type: string
+      lastName:
+        type: string
+      countryCode:
+        type: string
+      mobileNumber:
+        type: string
+      email:
+        type: string
+      deviceToken:
+        type: string
+  
+
+  changePassword:
+    required:
+      - currentPassword
+      - newPassword
+    properties:
+      currentPassword:
+        type: string
+      newPassword: 
+        type: string
+
+
+  login:
+    required:
+      - mobileNumber
+      - password
+    properties:
+      mobileNumber:
+        type: string
+      password: 
+        type: string  
+
+  inviteUser:
+    required:
+      - email
+      - planId
+      - url
+    properties:
+      email:
+        type: string
+      planId:
+        type: string
+      url:
+        type: string
+
+  addFAQ:
+    required:
+      - question
+      - answer
+    properties:
+      question:
+        type: string
+      answer:
+        type: string
+
+  deleteFAQ:
+    required:
+      - _id
+    properties:
+      _id:
+        type: string
+
+  editFAQ:
+    required:
+      - _id
+    properties:
+      _id:
+        type: string
+      question:
+        type: string
+      answer:
+        type: string
+
+
+  enableDisableNotification:
+    required:
+      - notifications
+    properties:
+      notifications:
+        type: object
+        properties:
+          trade_error:
+            type: boolean
+            default: false
+          trade_cancel:
+            type: boolean
+            default: false
+          trade_success:
+            type: boolean
+            default: false
+
+  addContactUs:
+    required:
+      - name
+      - email
+      - mobileNo
+      - message
+    properties:
+      name:
+        type: string
+      email:
+        type: string
+      mobileNo:
+        type: string
+      message:
+        type: string
+
+  addContests:
+    required:
+      - title
+      - price
+      - totalAmount
+      - maxContest
+      - minContest
+      - contestType
+      - isActive
+    properties:
+      title:
+        type: string
+      description:
+        type: string
+      price:
+        type: number
+      totalAmount:
+        type: number
+      maxContest:
+        type: number
+      minContest:
+        type: number
+      isActive:
+        type: boolean
+        default: false
+      matchId:
+         type: array
+         items:
+            type: string  
+      contestType:
+        type: string
+        enum: ["MEGA","NORMAL"]
+        default: "NORMAL"
+      distributeAmount:
+        type: array
+        items:
+          type: object
+          properties:
+            rank:
+              type: string
+            winningAmount:
+              type: string
+
+  editContests:
+    required:
+      - contestId
+      - contestType
+    properties:
+      contestId:
+        type: string
+      title:
+        type: string
+      description:
+        type: string
+      price:
+        type: number
+      totalAmount:
+        type: number
+      maxContest:
+        type: number
+      minContest:
+        type: number
+      isActive:
+        type: boolean
+        default: false
+      matchId:
+         type: array
+         items:
+            type: string  
+      contestType:
+        type: string
+        enum: ["MEGA","NORMAL"]
+        default: "NORMAL"
+      distributeAmount:
+        type: array
+        items:
+          type: object
+          properties:
+            rank:
+              type: string
+            winningAmount:
+              type: string
+
+  createTeams:
+    required:
+      - player
+      - matchId
+    properties:
+      matchId:
+        type: integer
+      contestId:
+        type: string
+      player:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstname:
+              type: string
+            lastname:
+              type: string
+            fullname:
+              type: string
+            image_path:
+              type: string
+            gender:
+              type: string
+            captain:
+              type: boolean
+              default: false
+            viceCaptain:
+              type: boolean
+              default: false
+            position:
+              type: object
+      backupPlayer:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstname:
+              type: string
+            lastname:
+              type: string
+            fullname:
+              type: string
+            image_path:
+              type: string
+            gender:
+              type: string
+            captain:
+              type: boolean
+              default: false
+            viceCaptain:
+              type: boolean
+              default: false
+            position:
+              type: object
+
+  editTeams:
+    required:
+      - player
+      - teamId
+    properties:
+      teamId:
+        type: string
+      player:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstname:
+              type: string
+            lastname:
+              type: string
+            fullname:
+              type: string
+            image_path:
+              type: string
+            gender:
+              type: string
+            captain:
+              type: boolean
+              default: false
+            viceCaptain:
+              type: boolean
+              default: false
+            position:
+              type: object
+      backupPlayer:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: integer
+            firstname:
+              type: string
+            lastname:
+              type: string
+            fullname:
+              type: string
+            image_path:
+              type: string
+            gender:
+              type: string
+            captain:
+              type: boolean
+              default: false
+            viceCaptain:
+              type: boolean
+              default: false
+            position:
+              type: object

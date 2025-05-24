@@ -1,0 +1,19 @@
+{
+  "port": 2211,
+  "hostAddress": "localhost:2211",
+  "swaggerDefinition": {
+    "info": {
+      "title": "aved-node",
+      "version": "2.0",
+      "description": "aved- API Docs"
+    },
+    "basePath": "/api/v1",
+    "securityDefinitions": {
+      "tokenauth": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header"
+      }
+    }
+  }
+}
