@@ -82,16 +82,16 @@ export class adminController {
       const user = await findUser({ _id: req.userId });
       if (!user) throw apiError.notFound(responseMessage.USER_NOT_FOUND);
       if (user.userType !== 'ADMIN') throw apiError.unauthorized(responseMessage.UNAUTHORIZED);
-      let whereClause = { userType: 'USER'};
+      let whereClause = { userType: 'USER' };
       if (search) {
         whereClause[Op.or] = [
           { fullName: { [Op.like]: `%${search}%` } },
-          { email: { [Op.like]: `%${search}%` } } 
+          { email: { [Op.like]: `%${search}%` } }
         ];
       }
       if (fromDate) whereClause.createdAt = { [Op.gte]: new Date(fromDate) };
       if (toDate) whereClause.createdAt = { ...whereClause.createdAt, [Op.lte]: new Date(toDate) };
-      if(filter) whereClause.status = filter;
+      if (filter) whereClause.status = filter;
       const page = parseInt(req.query.page, 10) || 1;
       const limit = parseInt(req.query.limit, 10) || 10;
       const skip = (page - 1) * limit;
@@ -102,32 +102,32 @@ export class adminController {
       return next(error);
     }
   }
-   /**
-   * @swagger
-   * /admin/changePassword:
-   *   post:
-   *     tags:
-   *       - ADMIN
-   *     description: changePassword
-   *     summary: changePassword of the admin 
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: authToken
-   *         description: token
-   *         in: header
-   *         required: true
-   *       - name: changePassword
-   *         description: changePassword
-   *         in: body
-   *         required: true
-   *         schema:
-   *           $ref: '#/definitions/changePassword'
-   *     responses:
-   *       200:
-   *         description: Returns success message
-   */
-   async changePassword(req, res, next) {
+  /**
+  * @swagger
+  * /admin/changePassword:
+  *   post:
+  *     tags:
+  *       - ADMIN
+  *     description: changePassword
+  *     summary: changePassword of the admin 
+  *     produces:
+  *       - application/json
+  *     parameters:
+  *       - name: authToken
+  *         description: token
+  *         in: header
+  *         required: true
+  *       - name: changePassword
+  *         description: changePassword
+  *         in: body
+  *         required: true
+  *         schema:
+  *           $ref: '#/definitions/changePassword'
+  *     responses:
+  *       200:
+  *         description: Returns success message
+  */
+  async changePassword(req, res, next) {
     const validationSchema = Joi.object({
       currentPassword: Joi.string().required(),
       newPassword: Joi.string().required(),
@@ -154,7 +154,7 @@ export class adminController {
       if (validatedBody.currentPassword == validatedBody.newPassword) {
         throw apiError.badRequest(responseMessage.OLD_PWD_NOT_SAME);
       }
-  
+
       let updated = await updateUser(userResult._id, {
         password: bcrypt.hashSync(validatedBody.newPassword),
       });
@@ -207,7 +207,7 @@ export class adminController {
     try {
       const { error, value: validatedBody } = validationSchema.validate(req.body);
       if (error) return next(error);
-      const {newPassword , confirmPassword} = validatedBody;
+      const { newPassword, confirmPassword } = validatedBody;
       // const {
       //   newPassword,
       //   confirmPassword
@@ -239,48 +239,48 @@ export class adminController {
         }
       }
     } catch (error) {
-      console.log("❌ Error Occured at ResetPassword Admin ---> ",error);
+      console.log("❌ Error Occured at ResetPassword Admin ---> ", error);
       return next(error);
     }
   }
-   /**
-   * @swagger
-   * /admin/login:
-   *   post:
-   *     tags:
-   *       - ADMIN
-   *     description: Admin login with email and Password
-   *     summary: Admin login with email and Password
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: emailUsernameOrPhone
-   *         description: emailUsernameOrPhone
-   *         in: formData
-   *         required: true
-   *         default: 'mobiloitte@mailinator.com'
-   *       - name: password
-   *         description: password
-   *         in: formData
-   *         required: true
-   *         default: 'Mobiloitte@1'
-   *       - name: ip
-   *         description: ip address
-   *         in: formData
-   *         required: false
-   *       - name: browser
-   *         description: browser of the requested user
-   *         in: formData
-   *         required: false
-   *       - name: device
-   *         description: device of the requested User
-   *         in: formData
-   *         required: false
-   *     responses:
-   *       200:
-   *         description: Returns success message
-   */
-   async login(req, res, next) {
+  /**
+  * @swagger
+  * /admin/login:
+  *   post:
+  *     tags:
+  *       - ADMIN
+  *     description: Admin login with email and Password
+  *     summary: Admin login with email and Password
+  *     produces:
+  *       - application/json
+  *     parameters:
+  *       - name: emailUsernameOrPhone
+  *         description: emailUsernameOrPhone
+  *         in: formData
+  *         required: true
+  *         default: 'mobiloitte@mailinator.com'
+  *       - name: password
+  *         description: password
+  *         in: formData
+  *         required: true
+  *         default: 'Mobiloitte@1'
+  *       - name: ip
+  *         description: ip address
+  *         in: formData
+  *         required: false
+  *       - name: browser
+  *         description: browser of the requested user
+  *         in: formData
+  *         required: false
+  *       - name: device
+  *         description: device of the requested User
+  *         in: formData
+  *         required: false
+  *     responses:
+  *       200:
+  *         description: Returns success message
+  */
+  async login(req, res, next) {
     var validationSchema = Joi.object({
       emailUsernameOrPhone: Joi.string().required(),
       password: Joi.string().required(),
@@ -324,7 +324,7 @@ export class adminController {
       if (!bcrypt.compareSync(password, userResult.password)) {
         throw apiError.conflict(responseMessage.INCORRECT_LOGIN);
       } else {
-       
+
         var token = await commonFunction.getToken({
           _id: userResult._id,
           email: userResult.email,
@@ -347,113 +347,113 @@ export class adminController {
       await createNotification(activityObj)
       return res.json(new response(results, responseMessage.LOGIN));
     } catch (error) {
-      console.log("Error Occured at Admin Login ---->>> login",error);
+      console.log("Error Occured at Admin Login ---->>> login", error);
       return next(error);
     }
   }
-    /**
-   * @swagger
-   * /admin/forgetPassword:
-   *   post:
-   *     tags:
-   *       - ADMIN
-   *     description: forgotPassword by ADMIN on plateform when he forgot password
-   *     summary: forgotPassword by ADMIN on plateform when he forgot password
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: forgotPassword
-   *         description: forgotPassword
-   *         in: body
-   *         required: true
-   *         schema:
-   *           $ref: '#/definitions/forgotPassword'
-   *     responses:
-   *       200:
-   *         description: Returns success message
-   */
-    async forgotPassword(req, res, next) {
-      var validationSchema = Joi.object({
-        email: Joi.string().required(),
-      });
-      try {
-        const { error, value: validatedBody } = validationSchema.validate(req.body);
-        if (error) return next(error);
-        if (req.body.email) {
-          req.body.email = req.body.email.toLowerCase();
-        }
-        const {
-          email
-        } = validatedBody;
-        var userResult = await findUser({
-          $and: [{
-            status: {
-              $ne: status.DELETE
-            }
-          },
-          {
-            userType: {
-              $ne: userType.USER
-            },
-          },
-          {
-            $or: [{
-              email: email
-            }]
-          },
-          ],
-        });
-        if (!userResult) {
-          throw apiError.notFound(responseMessage.USER_NOT_FOUND);
-        } else {
-          var otp = commonFunction.getOTP();
-          var newOtp = otp;
-          var time = Date.now() + 180000;  //OTP expires in 3 MINS
-          await commonFunction.sendOTPMail(userResult.email, newOtp);
-          var updateResult = await updateUser({
-            _id: userResult._id
-          }, {
-              otp: newOtp,
-              otpExpiresAt: time
-          });
-          console.log("The updateResult is ---> ", updateResult);
-          updateResult = _.omit(JSON.parse(JSON.stringify(updateResult)), [ "otp" , "password", "base64", "secretGoogle", "emailotp2FA", "withdrawOtp", "password"])
-  
-          return res.json(new response(updateResult, responseMessage.OTP_SEND));
-        }
-      } catch (error) {
-        console.log("❌ The Error Occures at forgetPassword---> ",error);
-        return next(error);
+  /**
+ * @swagger
+ * /admin/forgetPassword:
+ *   post:
+ *     tags:
+ *       - ADMIN
+ *     description: forgotPassword by ADMIN on plateform when he forgot password
+ *     summary: forgotPassword by ADMIN on plateform when he forgot password
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: forgotPassword
+ *         description: forgotPassword
+ *         in: body
+ *         required: true
+ *         schema:
+ *           $ref: '#/definitions/forgotPassword'
+ *     responses:
+ *       200:
+ *         description: Returns success message
+ */
+  async forgotPassword(req, res, next) {
+    var validationSchema = Joi.object({
+      email: Joi.string().required(),
+    });
+    try {
+      const { error, value: validatedBody } = validationSchema.validate(req.body);
+      if (error) return next(error);
+      if (req.body.email) {
+        req.body.email = req.body.email.toLowerCase();
       }
-    }
+      const {
+        email
+      } = validatedBody;
+      var userResult = await findUser({
+        $and: [{
+          status: {
+            $ne: status.DELETE
+          }
+        },
+        {
+          userType: {
+            $ne: userType.USER
+          },
+        },
+        {
+          $or: [{
+            email: email
+          }]
+        },
+        ],
+      });
+      if (!userResult) {
+        throw apiError.notFound(responseMessage.USER_NOT_FOUND);
+      } else {
+        var otp = commonFunction.getOTP();
+        var newOtp = otp;
+        var time = Date.now() + 180000;  //OTP expires in 3 MINS
+        await commonFunction.sendOTPMail(userResult.email, newOtp);
+        var updateResult = await updateUser({
+          _id: userResult._id
+        }, {
+          otp: newOtp,
+          otpExpiresAt: time
+        });
+        console.log("The updateResult is ---> ", updateResult);
+        updateResult = _.omit(JSON.parse(JSON.stringify(updateResult)), ["otp", "password", "base64", "secretGoogle", "emailotp2FA", "withdrawOtp", "password"])
 
-     /**
-   * @swagger
-   * /admin/verifyOtp:
-   *   post:
-   *     tags:
-   *       - ADMIN
-   *     description: verifyOTP
-   *     summary: verifyOTP of the admin
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: verifyOTP
-   *         description: verifyOTP
-   *         in: body
-   *         required: true
-   *         schema:
-   *           $ref: '#/definitions/verifyOTP'
-   *     responses:
-   *       200:
-   *         description: OTP send successfully.
-   *       404:
-   *         description: This user does not exist.
-   *       500:
-   *         description: Internal Server Error
-   *       501:
-   *         description: Something went wrong!
-   */
+        return res.json(new response(updateResult, responseMessage.OTP_SEND));
+      }
+    } catch (error) {
+      console.log("❌ The Error Occures at forgetPassword---> ", error);
+      return next(error);
+    }
+  }
+
+  /**
+* @swagger
+* /admin/verifyOtp:
+*   post:
+*     tags:
+*       - ADMIN
+*     description: verifyOTP
+*     summary: verifyOTP of the admin
+*     produces:
+*       - application/json
+*     parameters:
+*       - name: verifyOTP
+*         description: verifyOTP
+*         in: body
+*         required: true
+*         schema:
+*           $ref: '#/definitions/verifyOTP'
+*     responses:
+*       200:
+*         description: OTP send successfully.
+*       404:
+*         description: This user does not exist.
+*       500:
+*         description: Internal Server Error
+*       501:
+*         description: Something went wrong!
+*/
   async verifyOtp(req, res, next) {
     var validationSchema = Joi.object({
       email: Joi.string().required(),
@@ -508,108 +508,108 @@ export class adminController {
       };
       return res.json(new response(obj, responseMessage.OTP_VERIFY));
     } catch (error) {
-      console.log("⚔️ Error Occured at verifyOtp----> " , error);
+      console.log("⚔️ Error Occured at verifyOtp----> ", error);
       return next(error);
     }
   }
 
-    /**
-   * @swagger
-   * /admin/resentOtp:
-   *   put:
-   *     summary: Admin Resent OTP
-   *     tags:
-   *       - ADMIN
-   *     description: Resent OTP
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: email
-   *         description: email
-   *         in: formData
-   *         required: true
-   *     responses:
-   *       200:
-   *         description: Returns success message
-   *       404:
-   *         description: User not found || Data not found.
-   *       501:
-   *         description: Something went wrong!
-   */
+  /**
+ * @swagger
+ * /admin/resentOtp:
+ *   put:
+ *     summary: Admin Resent OTP
+ *     tags:
+ *       - ADMIN
+ *     description: Resent OTP
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: email
+ *         description: email
+ *         in: formData
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Returns success message
+ *       404:
+ *         description: User not found || Data not found.
+ *       501:
+ *         description: Something went wrong!
+ */
 
-    async resentOtp(req, res, next) {
-      var validationSchema = Joi.object({
-        email: Joi.string().required()
+  async resentOtp(req, res, next) {
+    var validationSchema = Joi.object({
+      email: Joi.string().required()
+    });
+    try {
+      var validatedBody = await validationSchema.validateAsync(req.body);
+      var userResult = await findUser({
+        email: validatedBody.email,
+        status: { $ne: status.DELETE },
+        userType: [userType.ADMIN, userType.SUBADMIN],
       });
-      try {
-        var validatedBody = await validationSchema.validateAsync(req.body);
-        var userResult = await findUser({
-          email: validatedBody.email,
-          status: { $ne: status.DELETE },
-          userType: [userType.ADMIN, userType.SUBADMIN],
-        });
-        if (!userResult) {
-          throw apiError.notFound(responseMessage.USER_NOT_FOUND);
-        }
-        if (userResult.otpVerified) {
-          throw apiError.badRequest(responseMessage.OTP_ALREADY_VERIFIED);
-        }
-        // let otp = await commonFunction.getOTPFourDigit();
-        var otp = await commonFunction.getOTP();
-        let otpTime = new Date().getTime() + 60000;
-        const updateResult = await updateUser(
-          { _id: userResult._id },
-          { otp: otp, otpTime: otpTime }
-        );
-        await commonFunction.sendResendOTP(userResult.email, otp);
-        return res.json(
-          new response({ status: true }, responseMessage.OTP_RESEND)
-        );
-      } catch (error) {
-        console.error(error);
-        return next(error);
+      if (!userResult) {
+        throw apiError.notFound(responseMessage.USER_NOT_FOUND);
       }
+      if (userResult.otpVerified) {
+        throw apiError.badRequest(responseMessage.OTP_ALREADY_VERIFIED);
+      }
+      // let otp = await commonFunction.getOTPFourDigit();
+      var otp = await commonFunction.getOTP();
+      let otpTime = new Date().getTime() + 60000;
+      const updateResult = await updateUser(
+        { _id: userResult._id },
+        { otp: otp, otpTime: otpTime }
+      );
+      await commonFunction.sendResendOTP(userResult.email, otp);
+      return res.json(
+        new response({ status: true }, responseMessage.OTP_RESEND)
+      );
+    } catch (error) {
+      console.error(error);
+      return next(error);
     }
+  }
 
-   /**
-   * @swagger
-   * /admin/dropDatabase:
-   *   delete:
-   *     summary: Drop the ENTIRE database
-   *     description: Drop the ENTIRE database ALERT
-   *     tags:
-   *       - ADMIN
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: authToken
-   *         description: token
-   *         in: header
-   *         required: true
-   *     responses:
-   *       200:
-   *         description: Returns success message
-   *       404:
-   *         description: User not found || Data not found.
-   *       501:
-   *         description: Something went wrong!
-   */
-    async dropDatabase(req, res, next) {
-      try {
-        let adminData = await findUser({
-          _id: req.userId,
-          userType: { $in: [userType.ADMIN] }, // Only allow admins to drop the database
-        });
-        if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
-  
-        const db = mongoose.connection;
-        // await db.dropDatabase();
-        return res.json(new response({}, "Database dropped successfully."));
-      } catch (error) {
-        console.log("❌ Error Occurred at dropDatabase ---> ", error.message);
-        return next(error);
-      }
+  /**
+  * @swagger
+  * /admin/dropDatabase:
+  *   delete:
+  *     summary: Drop the ENTIRE database
+  *     description: Drop the ENTIRE database ALERT
+  *     tags:
+  *       - ADMIN
+  *     produces:
+  *       - application/json
+  *     parameters:
+  *       - name: authToken
+  *         description: token
+  *         in: header
+  *         required: true
+  *     responses:
+  *       200:
+  *         description: Returns success message
+  *       404:
+  *         description: User not found || Data not found.
+  *       501:
+  *         description: Something went wrong!
+  */
+  async dropDatabase(req, res, next) {
+    try {
+      let adminData = await findUser({
+        _id: req.userId,
+        userType: { $in: [userType.ADMIN] }, // Only allow admins to drop the database
+      });
+      if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+
+      const db = mongoose.connection;
+      // await db.dropDatabase();
+      return res.json(new response({}, "Database dropped successfully."));
+    } catch (error) {
+      console.log("❌ Error Occurred at dropDatabase ---> ", error.message);
+      return next(error);
     }
+  }
 
 }
 
