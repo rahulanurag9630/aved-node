@@ -13,5 +13,11 @@ export default Express.Router()
   .post("/changePassword" , adminController.changePassword)
   .post("/resetPassword" , adminController.resetPassword)
   .delete("/dropDatabase", adminController.dropDatabase)
+  .post("/addOrUpdateBlog", adminController.addOrUpdateBlog)
+  .post("/toggleBlockStatus", adminController.toggleBlockStatus)
+  .post("/deleteBlog", adminController.deleteBlog)
+  
+
+  
 
 
