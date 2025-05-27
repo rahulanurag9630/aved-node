@@ -9,6 +9,8 @@ import userType from '../../../../enums/userType';
 import commonFunction from "../../../../helper/util";
 import { notificationServices } from "../../services/notification";
 import { amenitiesServices } from '../../services/amenities';
+import { blogServices } from "../../services/blog";
+import blogModel from "../../../../models/blog";
 const {
   createNotification, findNotification,
 } = notificationServices;
@@ -849,7 +851,199 @@ export class adminController {
     }
   }
 
+  /**
+  * @swagger
+  * /admin/addOrUpdateBlog:
+  *   post:
+  *     tags:
+  *       - BLOG
+  *     description: Add or update a blog
+  *     summary: Add or update blog
+  *     produces:
+  *       - application/json
+  *     parameters:
+  *       - name: authToken
+  *         in: header
+  *         required: true
+  *         type: string
+  *       - name: id
+  *         in: formData
+  *         required: false
+  *         type: string
+  *       - name: title
+  *         in: formData
+  *         required: true
+  *         type: string
+  *       - name: title_ar
+  *         in: formData
+  *         required: true
+  *         type: string
+  *       - name: description
+  *         in: formData
+  *         required: true
+  *         type: string
+  *       - name: description_ar
+  *         in: formData
+  *         required: true
+  *         type: string
+  *       - name: image
+  *         in: formData
+  *         required: false
+  *         type: string
+  *       - name: image_ar
+  *         in: formData
+  *         required: false
+  *         type: string
+  *     responses:
+  *       200:
+  *         description: Blog added or updated successfully
+  */
 
+  async addOrUpdateBlog(req, res, next) {
+    const validationSchema = Joi.object({
+      id: Joi.string().optional(), // Optional for update
+      title: Joi.string().required(),
+      title_ar: Joi.string().required(),
+      description: Joi.string().required(),
+      description_ar: Joi.string().required(),
+      image: Joi.string().optional(),
+      image_ar: Joi.string().optional()
+    });
+
+    try {
+      // Check if authToken is present
+      const authToken = req.headers.authtoken;
+      if (!authToken) return next(apiError.unauthorized("authToken is required."));
+
+      const { error, value: validatedBody } = validationSchema.validate(req.body);
+      if (error) return next(apiError.badRequest(error.message));
+
+      let blog;
+      if (validatedBody.id) {
+        // Update existing blog
+        blog = await blogServices.updateBlog(validatedBody.id, validatedBody);
+        return res.json(new response(blog, "Blog updated successfully"));
+      } else {
+        // Add new blog
+        blog = await blogServices.addBlog(validatedBody);
+        return res.json(new response(blog, responseMessage.BLOG_ADDED));
+      }
+    } catch (err) {
+      console.log("Error occurred at addOrUpdateBlog ---->>>", err);
+      return next(err);
+    }
+  }
+
+
+  /**
+  * @swagger
+  * /admin/toggleBlockStatus:
+  *   post:
+  *     tags:
+  *       - BLOG
+  *     description: Block or unblock a blog (status toggle between ACTIVE and BLOCK)
+  *     summary: Toggle blog status
+  *     produces:
+  *       - application/json
+  *     parameters:
+  *       - name: authToken
+  *         in: header
+  *         required: true
+  *         type: string
+  *       - name: id
+  *         in: formData
+  *         required: true
+  *         type: string
+  *     responses:
+  *       200:
+  *         description: Blog status updated
+  */
+
+  async toggleBlockStatus(req, res, next) {
+    const schema = Joi.object({
+      id: Joi.string().required()
+    });
+
+    try {
+      const { error, value } = schema.validate(req.body);
+      if (error) return next(apiError.badRequest(error.message));
+      const authToken = req.headers.authtoken;
+      if (!authToken) return next(apiError.unauthorized("authToken is required."));
+      const blog = await blogModel.findById(value.id);
+      if (!blog) return next(apiError.notFound("Blog not found"));
+      const newStatus = blog.status === status.ACTIVE ? status.BLOCK : status.ACTIVE;
+      const updatedBlog = await blogServices.updateBlog(value.id, {
+        status: newStatus
+      });
+      return res.json(
+        new response(
+          {
+            id: updatedBlog._id,
+            title: updatedBlog.title,
+            description: updatedBlog.description,
+            status: updatedBlog.status,
+            updatedAt: updatedBlog.updatedAt
+          },
+          `Blog has been ${newStatus === status.BLOCK ? "blocked" : "unblocked"} successfully`
+        )
+      );
+    } catch (err) {
+      console.log("Error in toggleBlockBlog ---->>>", err);
+      return next(err);
+    }
+  };
+
+  /**
+ * @swagger
+ * /admin/deleteBlog:
+ *   post:
+ *     tags:
+ *       - BLOG
+ *     summary: Permanently delete a blog
+ *     description: Hard delete a blog from the database
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         required: true
+ *         type: string
+ *       - name: id
+ *         in: formData
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Blog deleted successfully
+ */
+
+  async deleteBlog(req, res, next) {
+    const schema = Joi.object({
+      id: Joi.string().required()
+    });
+
+    try {
+      const { error, value } = schema.validate(req.body);
+      if (error) return next(apiError.badRequest(error.message));
+      const authToken = req.headers.authtoken;
+      const blog = await blogModel.findById(value.id);
+      if (!blog) return next(apiError.notFound("Blog not found"));
+      const deletedBlog = await blogServices.deleteBlogById(value.id);
+
+      return res.json(
+        new response(
+          {
+            id: deletedBlog._id,
+            title: deletedBlog.title,
+            description: deletedBlog.description,
+            deletedAt: new Date()
+          },
+          "Blog has been deleted permanently"
+        )
+      );
+    } catch (err) {
+      console.log("Error in deleteBlog ---->>>", err);
+      return next(err);
+    }
+  };
 }
 
 export default new adminController();

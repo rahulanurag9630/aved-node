@@ -15,5 +15,11 @@ export default Express.Router()
   .delete("/dropDatabase", adminController.dropDatabase)
   .post("/addUpdateAmenities", adminController.addUpdateAmenity)
   .get("/listAmenities", adminController.listAmenities)
+  .post("/addOrUpdateBlog", adminController.addOrUpdateBlog)
+  .post("/toggleBlockStatus", adminController.toggleBlockStatus)
+  .post("/deleteBlog", adminController.deleteBlog)
+
+
+
 
 
