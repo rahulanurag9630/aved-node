@@ -8,6 +8,7 @@ import responseMessage from '../../../../../assets/responseMessage';
 import userType from '../../../../enums/userType';
 import commonFunction from "../../../../helper/util";
 import { notificationServices } from "../../services/notification";
+import { amenitiesServices } from '../../services/amenities';
 const {
   createNotification, findNotification,
 } = notificationServices;
@@ -610,6 +611,244 @@ export class adminController {
       return next(error);
     }
   }
+  /**
+   * @swagger
+   * /admin/addUpdateAmenities:
+   *   post:
+   *     tags:
+   *       - AMENITIES MANAGEMENT
+   *     summary: Create or update an amenity
+   *     description: Create a new amenity or update an existing one based on the presence of an ID.
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: authToken
+   *         in: header
+   *         required: true
+   *         description: Admin authentication token
+   *       - in: body
+   *         name: body
+   *         description: Amenity details
+   *         required: true
+   *         schema:
+   *           type: object
+   *           properties:
+   *             id:
+   *               type: string
+   *               description: Amenity ID (if updating)
+   *             title:
+   *               type: string
+   *             title_ar:
+   *               type: string
+   *             image:
+   *               type: string
+   *             status:
+   *               type: string
+   *               enum: [ACTIVE, DELETE, BLOCK]
+   *     responses:
+   *       200:
+   *         description: Amenity created/updated successfully.
+   *       400:
+   *         description: Invalid input.
+   *       401:
+   *         description: Unauthorized access.
+   */
+  async addUpdateAmenity(req, res, next) {
+    let validationSchema = Joi.object({
+      id: Joi.string().optional(), // If present, means update; else create
+      title: Joi.string().optional(),
+      title_ar: Joi.string().optional(),
+      image: Joi.string().optional(),
+      status: Joi.string().valid("ACTIVE", "DELETE", "BLOCK").optional(),
+    });
+    try {
+      let validatedBody = await validationSchema.validateAsync(req.body);
+
+      // Check for admin permissions
+      let adminData = await findUser({
+        _id: req.userId,
+        userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
+      });
+      if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+
+      let result;
+      if (validatedBody.id) {
+        // Update existing amenity
+        result = await amenitiesServices.updateAmenities(validatedBody.id, validatedBody);
+        if (!result) throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      } else {
+        // Create new amenity
+        result = await amenitiesServices.addAmenities(validatedBody);
+      }
+
+      return res.json(new response(result, responseMessage.SUCCESS));
+    } catch (error) {
+      console.log("❌ Error occurred at addUpdateAmenity --->>", error);
+      return next(error);
+    }
+  }
+
+  /**
+ * @swagger
+ * /admin/blockActiveAmenitie:
+ *   patch:
+ *     tags:
+ *       - AMENITIES MANAGEMENT
+ *     summary: Toggle the status of an amenity (ACTIVE/BLOCK)
+ *     description: Use this endpoint to change the status of an amenity.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         required: true
+ *         description: Admin authentication token
+ *       - in: body
+ *         name: body
+ *         description: Amenity ID and desired status
+ *         required: true
+ *         schema:
+ *           type: object
+ *           properties:
+ *             id:
+ *               type: string
+ *               description: Amenity ID
+ *             status:
+ *               type: string
+ *               enum: [ACTIVE, BLOCK]
+ *               description: New status to be set
+ *     responses:
+ *       200:
+ *         description: Status updated successfully.
+ *       400:
+ *         description: Invalid input.
+ *       401:
+ *         description: Unauthorized access.
+ */
+  async toggleAmenityStatus(req, res, next) {
+    let validationSchema = Joi.object({
+      id: Joi.string().required(),
+      status: Joi.string().valid("ACTIVE", "BLOCK").required(),
+    });
+    try {
+      let validatedBody = await validationSchema.validateAsync(req.body);
+
+      // Verify admin privileges
+      let adminData = await findUser({
+        _id: req.userId,
+        userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
+      });
+      if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+
+      // Update status
+      let updatedAmenity = await amenitiesServices.updateAmenities(validatedBody.id, {
+        status: validatedBody.status,
+      });
+      if (!updatedAmenity) throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+
+      return res.json(new response(updatedAmenity, responseMessage.AMENITIE_STATUS_UPDATED));
+    } catch (error) {
+      console.log("❌ Error occurred at toggleAmenityStatus --->>", error);
+      return next(error);
+    }
+  }
+
+  /**
+    * @swagger
+    * /admin/listAmenities:
+    *   get:
+    *     tags:
+    *       - AMENITIES MANAGEMENT
+    *     summary: Listing of all amenities us by using admin token
+    *     description: Listing of all amenities requests.
+    *     produces:
+    *       - application/json
+    *     parameters:
+    *       - name: authToken
+    *         description: token
+    *         in: header
+    *         required: true
+    *       - name: search
+    *         description: search
+    *         in: query
+    *         required: false
+    *       - name: status
+    *         description: status
+    *         in: query
+    *         required: false
+    *       - name: userType
+    *         description: userType
+    *         in: query
+    *         required: false
+    *       - name: fromDate
+    *         description: fromDate
+    *         in: query
+    *         required: false
+    *       - name: toDate
+    *         description: toDate
+    *         in: query
+    *         required: false
+    *       - name: page
+    *         description: page
+    *         in: query
+    *         type: integer
+    *         required: false
+    *       - name: limit
+    *         description: limit
+    *         in: query
+    *         type: integer
+    *         required: false
+    *     responses:
+    *       200:
+    *         description: Data found successfully .
+    *       401:
+    *         description: Invalid file format
+    */
+
+  async listAmenities(req, res, next) {
+    let validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
+    try {
+      let validatedBody = await validationSchema.validateAsync(req.query);
+
+      // Verify admin privileges
+      let adminData = await findUser({
+        _id: req.userId,
+        userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
+      });
+      if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+
+      // Build query object
+      let query = {};
+      if (validatedBody.search) {
+        query.title = { $regex: validatedBody.search, $options: "i" };
+      }
+      if (validatedBody.status) {
+        query.status = validatedBody.status;
+      }
+
+      // Pagination options
+      let options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      let paginatedAmenities = await amenitiesServices.paginateAmenities(query, options);
+      if (paginatedAmenities.docs.length === 0)
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+
+      return res.json(new response(paginatedAmenities, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.log("❌ Error occurred at listAmenities --->>", error);
+      return next(error);
+    }
+  }
+
 
 }
 
