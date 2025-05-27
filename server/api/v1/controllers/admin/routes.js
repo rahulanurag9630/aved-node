@@ -8,10 +8,12 @@ export default Express.Router()
   .post("/forgetPassword", adminController.forgotPassword)
   .post("/verifyOtp", adminController.verifyOtp)
   .put("/resentOtp", adminController.resentOtp)
+  .post("/addBlog", adminController.addBlog)
   .use(auth.verifyToken)
   .get("/listAllUsers", adminController.listAllUsers)
   .post("/changePassword" , adminController.changePassword)
   .post("/resetPassword" , adminController.resetPassword)
   .delete("/dropDatabase", adminController.dropDatabase)
+
 
 

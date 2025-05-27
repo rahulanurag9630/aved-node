@@ -8,6 +8,7 @@ import responseMessage from '../../../../../assets/responseMessage';
 import userType from '../../../../enums/userType';
 import commonFunction from "../../../../helper/util";
 import { notificationServices } from "../../services/notification";
+import blogServices from "../../services/blog";
 const {
   createNotification, findNotification,
 } = notificationServices;
@@ -20,7 +21,7 @@ const {
 } = userServices;
 import _ from "lodash";
 
-export class adminController {
+class AdminController {
 
   /**
    * @swagger
@@ -611,6 +612,69 @@ export class adminController {
       }
     }
 
+/**
+   * @swagger
+   * /admin/addBlog:
+   *   post:
+   *     tags:
+   *       - BLOG
+   *     description: Add a new blog
+   *     summary: Add blog
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: title
+   *         in: formData
+   *         required: true
+   *         type: string
+   *       - name: title_ar
+   *         in: formData
+   *         required: true
+   *         type: string
+   *       - name: description
+   *         in: formData
+   *         required: true
+   *         type: string
+   *       - name: description_ar
+   *         in: formData
+   *         required: true
+   *         type: string
+   *       - name: image
+   *         in: formData
+   *         required: false
+   *         type: string
+   *       - name: image_ar
+   *         in: formData
+   *         required: false
+   *         type: string
+   *     responses:
+   *       200:
+   *         description: Blog added successfully
+   */
+  async addBlog(req, res, next) {
+    const validationSchema = Joi.object({
+      title: Joi.string().required(),
+      title_ar: Joi.string().required(),
+      description: Joi.string().required(),
+      description_ar: Joi.string().required(),
+      image: Joi.string().optional(),
+      image_ar: Joi.string().optional()
+    });
+
+    try {
+      const { error, value: validatedBody } = validationSchema.validate(req.body);
+      if (error) return next(apiError.badRequest(error.message));
+
+      const blog = await blogServices.addBlog(validatedBody);
+      return res.json(new response(blog, responseMessage.BLOG_ADDED));
+    } catch (err) {
+      console.log("Error occurred at addBlog ---->>>", err);
+      return next(err);
+    }
+  }
+
+
 }
 
-export default new adminController();
+
+export default new AdminController();
