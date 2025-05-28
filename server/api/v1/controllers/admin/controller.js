@@ -683,7 +683,7 @@ export class adminController {
         result = await amenitiesServices.addAmenities(validatedBody);
       }
 
-      return res.json(new response(result, responseMessage.SUCCESS));
+      return res.json(new response(result, responseMessage.AMENITIE_ADD_UPDATED_SUCESS));
     } catch (error) {
       console.log("❌ Error occurred at addUpdateAmenity --->>", error);
       return next(error);
