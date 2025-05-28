@@ -6,7 +6,7 @@ import responseMessage from '../../assets/responseMessage';
 
 module.exports = {
   verifyToken(req, res, next) {
-    const token = req.headers.authToken || req.headers.authtoken;
+    const token = req.headers.authToken || req.headers.token;
     if (token) {
       jwt.verify(token, process.env.JWT_SECRET, async (err, result) => {
         if (err) {

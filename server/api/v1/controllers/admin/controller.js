@@ -675,9 +675,7 @@ export class adminController {
 
     try {
       // Check if authToken is present
-      const authToken = req.headers.authtoken;
-      if (!authToken) return next(apiError.unauthorized("authToken is required."));
-
+    
       const { error, value: validatedBody } = validationSchema.validate(req.body);
       if (error) return next(apiError.badRequest(error.message));
 
@@ -784,19 +782,11 @@ export class adminController {
   });
 
   try {
-    // Validate input
     const { error, value } = schema.validate(req.body);
     if (error) return next(apiError.badRequest(error.message));
-
-    // Check authToken
     const authToken = req.headers.authtoken;
-    if (!authToken) return next(apiError.unauthorized("authToken is required."));
-
-    // Check if blog exists
     const blog = await blogModel.findById(value.id);
     if (!blog) return next(apiError.notFound("Blog not found"));
-
-    // Perform hard delete
     const deletedBlog = await blogServices.deleteBlogById(value.id);
 
     return res.json(
