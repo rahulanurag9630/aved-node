@@ -783,11 +783,11 @@ export class adminController {
     *         in: query
     *         required: false
     *       - name: fromDate
-    *         description: fromDate
+    *         description: fromDate (ISO string or YYYY-MM-DD)
     *         in: query
     *         required: false
     *       - name: toDate
-    *         description: toDate
+    *         description: toDate (ISO string or YYYY-MM-DD)
     *         in: query
     *         required: false
     *       - name: page
@@ -802,7 +802,7 @@ export class adminController {
     *         required: false
     *     responses:
     *       200:
-    *         description: Data found successfully .
+    *         description: Data found successfully.
     *       401:
     *         description: Invalid file format
     */
@@ -811,9 +811,12 @@ export class adminController {
     let validationSchema = Joi.object({
       search: Joi.string().optional(),
       status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
+      fromDate: Joi.date().optional(),
+      toDate: Joi.date().optional(),
       page: Joi.number().optional().default(1),
       limit: Joi.number().optional().default(10),
     });
+
     try {
       let validatedBody = await validationSchema.validateAsync(req.query);
 
@@ -833,6 +836,20 @@ export class adminController {
         query.status = validatedBody.status;
       }
 
+      // Date filter
+      if (validatedBody.fromDate || validatedBody.toDate) {
+        query.createdAt = {};
+        if (validatedBody.fromDate) {
+          query.createdAt.$gte = new Date(validatedBody.fromDate);
+        }
+        if (validatedBody.toDate) {
+          // To include the entire toDate day, set time to 23:59:59
+          let toDate = new Date(validatedBody.toDate);
+          toDate.setHours(23, 59, 59, 999);
+          query.createdAt.$lte = toDate;
+        }
+      }
+
       // Pagination options
       let options = {
         page: validatedBody.page,
@@ -850,6 +867,7 @@ export class adminController {
       return next(error);
     }
   }
+
 
   /**
   * @swagger
