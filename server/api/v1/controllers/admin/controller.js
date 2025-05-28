@@ -23,7 +23,7 @@ const {
 } = userServices;
 import _ from "lodash";
 
-export class adminController {
+class AdminController {
 
   /**
    * @swagger
