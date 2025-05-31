@@ -23,7 +23,7 @@ const {
 } = userServices;
 import _ from "lodash";
 
-export class adminController {
+class AdminController {
 
   /**
    * @swagger
@@ -930,9 +930,7 @@ export class adminController {
 
     try {
       // Check if authToken is present
-      const authToken = req.headers.authtoken;
-      if (!authToken) return next(apiError.unauthorized("authToken is required."));
-
+    
       const { error, value: validatedBody } = validationSchema.validate(req.body);
       if (error) return next(apiError.badRequest(error.message));
 
@@ -985,8 +983,6 @@ export class adminController {
     try {
       const { error, value } = schema.validate(req.body);
       if (error) return next(apiError.badRequest(error.message));
-      const authToken = req.headers.authtoken;
-      if (!authToken) return next(apiError.unauthorized("authToken is required."));
       const blog = await blogModel.findById(value.id);
       if (!blog) return next(apiError.notFound("Blog not found"));
       const newStatus = blog.status === status.ACTIVE ? status.BLOCK : status.ACTIVE;
@@ -1062,6 +1058,97 @@ export class adminController {
       return next(err);
     }
   };
+
+
+  /**
+ * @swagger
+ * /admin/listBlogs:
+ *   get:
+ *     tags:
+ *       - BLOG MANAGEMENT
+ *     summary: Listing of all blogs using admin token
+ *     description: Retrieve a list of blogs with optional filters and pagination.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         description: Admin access token
+ *         in: header
+ *         required: true
+ *       - name: search
+ *         description: Search by blog title
+ *         in: query
+ *         required: false
+ *       - name: status
+ *         description: Blog status (ACTIVE, BLOCK, DELETE)
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Blogs listed successfully
+ *       401:
+ *         description: Unauthorized access
+ */
+
+async listBlogs(req, res, next) {
+  const validationSchema = Joi.object({
+    search: Joi.string().optional(),
+    status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
+    page: Joi.number().optional().default(1),
+    limit: Joi.number().optional().default(10),
+  });
+
+  try {
+    const validatedBody = await validationSchema.validateAsync(req.query);
+
+    // ✅ Admin authentication check
+    const adminData = await findUser({
+      _id: req.userId,
+      userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
+    });
+
+    if (!adminData) throw apiError.unauthorized(responseMessage.UNAUTHORIZED);
+
+    // ✅ Filter logic
+    const query = {};
+    if (validatedBody.search) {
+      query.title = { $regex: validatedBody.search, $options: "i" };
+    }
+    if (validatedBody.status) {
+      query.status = validatedBody.status;
+    }
+
+    // ✅ Pagination
+    const options = {
+      page: validatedBody.page,
+      limit: validatedBody.limit,
+      sort: { createdAt: -1 },
+    };
+
+    const blogs = await blogServices.paginateBlogs(query, options);
+
+    if (!blogs.docs.length) {
+      throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+    }
+
+    return res.json(new response(blogs, responseMessage.DATA_FOUND));
+  } catch (error) {
+    console.error("❌ Error in listBlogs --->>", error);
+    return next(error);
+  }
+}
+
+
 }
 
 export default new adminController();
