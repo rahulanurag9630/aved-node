@@ -8,7 +8,7 @@ export default Express.Router()
   .post("/forgetPassword", adminController.forgotPassword)
   .post("/verifyOtp", adminController.verifyOtp)
   .put("/resentOtp", adminController.resentOtp)
-  .post("/addBlog", adminController.addBlog)
+  .post("/addBlog", adminController.addOrUpdateBlog)
   .use(auth.verifyToken)
   .get("/listAllUsers", adminController.listAllUsers)
   .post("/changePassword", adminController.changePassword)
@@ -23,7 +23,7 @@ export default Express.Router()
   .get("/listBlogs", adminController.listBlogs)
 
 
-  
+
 
 
 

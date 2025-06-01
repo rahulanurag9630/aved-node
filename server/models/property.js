@@ -49,7 +49,7 @@ const propertySchema = new schema(
         seo_meta_tags: { type: String },
         publish_status: {
             type: String,
-            enum: ["published", "draft"],
+            enum: ["published", "draft", "Published", "Draft"],
             default: "draft"
         }
     },

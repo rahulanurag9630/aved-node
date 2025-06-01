@@ -141,8 +141,8 @@ export class propertyController {
             ).optional(),
             seo_meta_titles: Joi.string().optional(),
             seo_meta_tags: Joi.string().optional(),
-            publish_status: Joi.string().valid("published", "draft").optional(),
-            status: Joi.string().valid("ACTIVE", "BLOCK").optional()
+            publish_status: Joi.string().valid("published", "draft", "Published", "Draft").optional(),
+            status: Joi.string().valid("ACTIVE", "BLOCK", "Published", "Draft").optional()
         });
 
         try {
