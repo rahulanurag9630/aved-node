@@ -37,8 +37,22 @@ const propertySchema = new schema(
             default: "ACTIVE"
         },
         address: { type: String },
+        city: { type: String },
+        state: { type: String },
         latitude: { type: Number },
         longitude: { type: Number },
+        // ✅ New: location field for geospatial queries
+        location: {
+            type: {
+                type: String,
+                enum: ["Point"],
+                default: "Point"
+            },
+            coordinates: {
+                type: [Number], // [longitude, latitude]
+                index: "2dsphere"
+            }
+        },
         images: [{ type: String }],
         no_of_floors: { type: Number },
         floor_plan: [{
@@ -56,6 +70,18 @@ const propertySchema = new schema(
     options
 );
 
+// 🌟 Pre-save hook to set location automatically
+propertySchema.pre("save", function (next) {
+    if (this.latitude && this.longitude) {
+        this.location = {
+            type: "Point",
+            coordinates: [this.longitude, this.latitude]
+        };
+    }
+    next();
+});
+
+// Plugins
 propertySchema.plugin(mongoosePaginate);
 propertySchema.plugin(mongooseAggregatePaginate);
 

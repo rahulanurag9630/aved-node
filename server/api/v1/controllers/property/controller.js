@@ -11,7 +11,7 @@ const { findUser } = userServices;
 export class propertyController {
     /**
  * @swagger
- * /admin/addUpdateProperty:
+ * /property/addUpdateProperty:
  *   post:
  *     tags:
  *       - PROPERTY MANAGEMENT
@@ -171,6 +171,172 @@ export class propertyController {
             return next(error);
         }
     }
+
+    /**
+ * @swagger
+ * /property/listProperties:
+ *   get:
+ *     tags:
+ *       - PROPERTY MANAGEMENT
+ *     summary: List and filter properties
+ *     description: Filter properties by search keyword, property type, bedrooms, bathrooms, price range, status, publish status, city, and geolocation.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         description: token
+ *         in: header
+ *         required: true
+ *       - name: search
+ *         description: search keyword
+ *         in: query
+ *         required: false
+ *       - name: property_type
+ *         in: query
+ *         required: false
+ *       - name: no_of_bedrooms
+ *         in: query
+ *         type: number
+ *         required: false
+ *       - name: no_of_bathrooms
+ *         in: query
+ *         type: number
+ *         required: false
+ *       - name: min_price
+ *         in: query
+ *         type: number
+ *         required: false
+ *       - name: max_price
+ *         in: query
+ *         type: number
+ *         required: false
+ *       - name: status
+ *         in: query
+ *         enum: [ACTIVE, BLOCK]
+ *         required: false
+ *       - name: publish_status
+ *         in: query
+ *         enum: [published, draft, Published, Draft]
+ *         required: false
+ *       - name: city
+ *         in: query
+ *         required: false
+ *       - name: latitude
+ *         in: query
+ *         type: number
+ *         required: false
+ *       - name: longitude
+ *         in: query
+ *         type: number
+ *         required: false
+ *       - name: page
+ *         in: query
+ *         type: number
+ *         required: false
+ *       - name: limit
+ *         in: query
+ *         type: number
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Data found successfully.
+ *       401:
+ *         description: Unauthorized.
+ */
+    async listProperties(req, res, next) {
+        const Joi = require("joi");
+
+        let validationSchema = Joi.object({
+            search: Joi.string().optional(),
+            property_type: Joi.string().optional(),
+            no_of_bedrooms: Joi.number().optional(),
+            no_of_bathrooms: Joi.number().optional(),
+            min_price: Joi.number().optional(),
+            max_price: Joi.number().optional(),
+            status: Joi.string().valid("ACTIVE", "BLOCK").optional(),
+            publish_status: Joi.string().valid("published", "draft", "Published", "Draft").optional(),
+            city: Joi.string().optional(),
+            latitude: Joi.number().optional(),
+            longitude: Joi.number().optional(),
+            page: Joi.number().optional().default(1),
+            limit: Joi.number().optional().default(10),
+        });
+
+        try {
+            let validatedBody = await validationSchema.validateAsync(req.query);
+
+            // Check admin
+            let adminData = await findUser({
+                _id: req.userId,
+                userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
+            });
+            if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+
+            let query = {};
+
+            if (validatedBody.search) {
+                const regex = new RegExp(validatedBody.search, "i");
+                query.$or = [
+                    { property_name: regex },
+                    { overview: regex },
+                    { detailed_description: regex },
+                    { address: regex }
+                ];
+            }
+
+            if (validatedBody.property_type) query.property_type = validatedBody.property_type;
+            if (validatedBody.no_of_bedrooms) query.no_of_bedrooms = validatedBody.no_of_bedrooms;
+            if (validatedBody.no_of_bathrooms) query.no_of_bathrooms = validatedBody.no_of_bathrooms;
+            if (validatedBody.status) query.status = validatedBody.status;
+            if (validatedBody.publish_status) query.publish_status = validatedBody.publish_status;
+            if (validatedBody.city) query.city = validatedBody.city;
+
+            if (validatedBody.min_price || validatedBody.max_price) {
+                query.price = {};
+                if (validatedBody.min_price) query.price.$gte = validatedBody.min_price;
+                if (validatedBody.max_price) query.price.$lte = validatedBody.max_price;
+            }
+
+            // Pagination
+            let options = {
+                page: validatedBody.page,
+                limit: validatedBody.limit,
+                sort: { createdAt: -1 },
+                populate: "amenities"
+            };
+
+            // Geolocation filter (if both provided)
+            if (validatedBody.latitude && validatedBody.longitude) {
+                const lat = validatedBody.latitude;
+                const lon = validatedBody.longitude;
+                query.latitude = { $exists: true, $ne: null };
+                query.longitude = { $exists: true, $ne: null };
+
+                // Optional: filter by a radius (e.g., 10km)
+                // If using MongoDB geospatial queries with GeoJSON "location" field:
+                // query.location = {
+                //   $nearSphere: {
+                //     $geometry: {
+                //       type: "Point",
+                //       coordinates: [lon, lat],
+                //     },
+                //     $maxDistance: 10000, // 10 km
+                //   },
+                // };
+            }
+
+            // Use propertyServices to paginate
+            let paginatedProperties = await propertyServices.paginateProperties(query, options);
+            if (paginatedProperties.docs.length === 0)
+                throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+
+            return res.json(new response(paginatedProperties, responseMessage.DATA_FOUND));
+        } catch (error) {
+            console.log("❌ Error occurred at listProperties --->>", error);
+            return next(error);
+        }
+    }
+
 }
 
 export default new propertyController();
