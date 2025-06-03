@@ -11,6 +11,9 @@ import { notificationServices } from "../../services/notification";
 import { amenitiesServices } from '../../services/amenities';
 import { blogServices } from "../../services/blog";
 import blogModel from "../../../../models/blog";
+import { teamServices } from "../../services/team";
+ import teamModel from "../../../../models/team";
+
 const {
   createNotification, findNotification,
 } = notificationServices;
@@ -23,7 +26,7 @@ const {
 } = userServices;
 import _ from "lodash";
 
-class AdminController {
+export class adminController {
 
   /**
    * @swagger
@@ -1111,7 +1114,6 @@ async listBlogs(req, res, next) {
   try {
     const validatedBody = await validationSchema.validateAsync(req.query);
 
-    // ✅ Admin authentication check
     const adminData = await findUser({
       _id: req.userId,
       userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
@@ -1119,7 +1121,6 @@ async listBlogs(req, res, next) {
 
     if (!adminData) throw apiError.unauthorized(responseMessage.UNAUTHORIZED);
 
-    // ✅ Filter logic
     const query = {};
     if (validatedBody.search) {
       query.title = { $regex: validatedBody.search, $options: "i" };
@@ -1128,7 +1129,6 @@ async listBlogs(req, res, next) {
       query.status = validatedBody.status;
     }
 
-    // ✅ Pagination
     const options = {
       page: validatedBody.page,
       limit: validatedBody.limit,
@@ -1147,6 +1147,308 @@ async listBlogs(req, res, next) {
     return next(error);
   }
 }
+
+/**
+ * @swagger
+ * /admin/addOrUpdateTeam:
+ *   post:
+ *     tags:
+ *       - TEAM
+ *     description: Add or update a team member
+ *     summary: Add or update team
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         required: true
+ *         type: string
+ *       - name: id
+ *         in: formData
+ *         required: false
+ *         type: string
+ *       - name: name
+ *         in: formData
+ *         required: true
+ *         type: string
+ *       - name: position
+ *         in: formData
+ *         required: true
+ *         type: string
+ *       - name: thoughts
+ *         in: formData
+ *         required: true
+ *         type: string
+ *       - name: facebook
+ *         in: formData
+ *         required: false
+ *         type: string
+ *       - name: instagram
+ *         in: formData
+ *         required: false
+ *         type: string
+ *       - name: linkedin
+ *         in: formData
+ *         required: false
+ *         type: string
+ *       - name: image
+ *         in: formData
+ *         required: false
+ *         type: string
+ *       - name: status
+ *         in: formData
+ *         required: false
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Team member added or updated successfully
+ */
+
+async addOrUpdateTeam(req, res, next) {
+  const validationSchema = Joi.object({
+    id: Joi.string().allow("", null).optional(),
+    name: Joi.string().required(),
+    position: Joi.string().required(),
+    thoughts: Joi.string().required(),
+    facebook: Joi.string().optional().allow(""),
+    instagram: Joi.string().optional().allow(""),
+    linkedin: Joi.string().optional().allow(""),
+    image: Joi.string().optional(),
+  });
+
+  try {
+    const { error, value: validatedBody } = validationSchema.validate(req.body);
+    if (error) return next(apiError.badRequest(error.message));
+
+    // Clean up the `id` field if it's empty
+    const isUpdate = validatedBody.id && validatedBody.id.trim() !== "";
+    if (!isUpdate) {
+      delete validatedBody.id;
+    }
+
+    let teamMember;
+    if (isUpdate) {
+      // Update existing team member
+      teamMember = await teamServices.updateTeam(validatedBody.id, validatedBody);
+      return res.json(new response(teamMember, "Team member updated successfully"));
+    } else {
+      // Add new team member
+      teamMember = await teamServices.addTeam(validatedBody);
+      return res.json(new response(teamMember, "Team member added successfully"));
+    }
+  } catch (err) {
+    console.log("Error occurred at addOrUpdateTeam ---->>>", err);
+    return next(err);
+  }
+}
+
+/**
+ * @swagger
+ * /admin/toggleBlockTeamStatus:
+ *   post:
+ *     tags:
+ *       - TEAM
+ *     description: Block or unblock a team member (status toggle between ACTIVE and BLOCK)
+ *     summary: Toggle team member status
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         required: true
+ *         type: string
+ *       - name: id
+ *         in: formData
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Team member status updated
+ */
+
+async toggleBlockTeamStatus(req, res, next) {
+  const schema = Joi.object({
+    id: Joi.string().required()
+  });
+
+  try {
+    const { error, value } = schema.validate(req.body);
+    if (error) return next(apiError.badRequest(error.message));
+
+    const teamMember = await teamModel.findById(value.id);
+    if (!teamMember) return next(apiError.notFound("Team member not found"));
+
+    const newStatus = teamMember.status === status.ACTIVE ? status.BLOCK : status.ACTIVE;
+
+    const updatedTeam = await teamServices.updateTeam(value.id, {
+      status: newStatus
+    });
+
+    return res.json(
+      new response(
+        {
+          id: updatedTeam._id,
+          name: updatedTeam.name,
+          position: updatedTeam.position,
+          status: updatedTeam.status,
+          updatedAt: updatedTeam.updatedAt
+        },
+        `Team member has been ${newStatus === status.BLOCK ? "blocked" : "unblocked"} successfully`
+      )
+    );
+  } catch (err) {
+    console.error("Error in toggleBlockTeamStatus ---->>>", err);
+    return next(err);
+  }
+}
+
+
+/**
+ * @swagger
+ * /admin/deleteTeam:
+ *   post:
+ *     tags:
+ *       - TEAM
+ *     summary: Permanently delete a team member
+ *     description: Hard delete a team member from the database
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         required: true
+ *         type: string
+ *       - name: id
+ *         in: formData
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Team member deleted successfully
+ */
+async deleteTeam(req, res, next) {
+  const schema = Joi.object({
+    id: Joi.string().required()
+  });
+
+  try {
+    const { error, value } = schema.validate(req.body);
+    if (error) return next(apiError.badRequest(error.message));
+
+    const teamMember = await teamModel.findById(value.id);
+    if (!teamMember) return next(apiError.notFound("Team member not found"));
+
+    const deletedTeam = await teamServices.deleteTeamById(value.id);
+
+    return res.json(
+      new response(
+        {
+          id: deletedTeam._id,
+          name: deletedTeam.name,
+          position: deletedTeam.position,
+          deletedAt: new Date()
+        },
+        "Team member has been deleted permanently"
+      )
+    );
+  } catch (err) {
+    console.log("Error in deleteTeam ---->>>", err);
+    return next(err);
+  }
+}
+
+
+/**
+ * @swagger
+ * /admin/listTeam:
+ *   get:
+ *     tags:
+ *       - TEAM MANAGEMENT
+ *     summary: Listing of all team members using admin token
+ *     description: Retrieve a list of team members with optional filters and pagination.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         description: Admin access token
+ *         in: header
+ *         required: true
+ *       - name: search
+ *         description: Search by name or position
+ *         in: query
+ *         required: false
+ *       - name: status
+ *         description: Team member status (ACTIVE, BLOCK, DELETE)
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Team listed successfully
+ *       401:
+ *         description: Unauthorized access
+ */
+
+async listTeam(req, res, next) {
+  const validationSchema = Joi.object({
+    search: Joi.string().optional(),
+    status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
+    page: Joi.number().optional().default(1),
+    limit: Joi.number().optional().default(10),
+  });
+
+  try {
+    const validatedBody = await validationSchema.validateAsync(req.query);
+
+    // Verify admin access
+    const adminData = await findUser({
+      _id: req.userId,
+      userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
+    });
+
+    if (!adminData) throw apiError.unauthorized(responseMessage.UNAUTHORIZED);
+
+    // Build query
+    const query = {};
+    if (validatedBody.search) {
+      query.$or = [
+        { name: { $regex: validatedBody.search, $options: "i" } },
+        { position: { $regex: validatedBody.search, $options: "i" } },
+      ];
+    }
+    if (validatedBody.status) {
+      query.status = validatedBody.status;
+    }
+
+    // Pagination options
+    const options = {
+      page: validatedBody.page,
+      limit: validatedBody.limit,
+      sort: { createdAt: -1 },
+    };
+
+    // Fetch paginated team members
+    const teamList = await teamServices.paginateTeams(query, options);
+
+    if (!teamList.docs.length) {
+      throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+    }
+
+    return res.json(new response(teamList, responseMessage.DATA_FOUND));
+  } catch (error) {
+    console.error("❌ Error in listTeam --->>", error);
+    return next(error);
+  }
+}
+
+
 
 
 }

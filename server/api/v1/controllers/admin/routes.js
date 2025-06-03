@@ -8,7 +8,6 @@ export default Express.Router()
   .post("/forgetPassword", adminController.forgotPassword)
   .post("/verifyOtp", adminController.verifyOtp)
   .put("/resentOtp", adminController.resentOtp)
-  .post("/addBlog", adminController.addBlog)
   .use(auth.verifyToken)
   .get("/listAllUsers", adminController.listAllUsers)
   .post("/changePassword", adminController.changePassword)
@@ -21,6 +20,13 @@ export default Express.Router()
   .post("/toggleBlockStatus", adminController.toggleBlockStatus)
   .post("/deleteBlog", adminController.deleteBlog)
   .get("/listBlogs", adminController.listBlogs)
+  .post("/addOrUpdateTeam", adminController.addOrUpdateTeam)
+  .get("/listTeam", adminController.listTeam)
+  .post("/toggleBlockTeamStatus", adminController.toggleBlockTeamStatus)
+  .post("/deleteTeam", adminController.deleteTeam)
+
+
+
 
 
   
