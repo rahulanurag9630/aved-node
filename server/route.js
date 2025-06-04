@@ -3,6 +3,7 @@ import admin from "./api/v1/controllers/admin/routes";
 
 import staticContent from "./api/v1/controllers/staticContent/routes";
 import contactUs from "./api/v1/controllers/contactUs/routes";
+import property from "./api/v1/controllers/property/routes";
 
 
 
@@ -19,6 +20,7 @@ export default function routes(app) {
   app.use("/api/v1/staticContent", staticContent);
 
   app.use("/api/v1/contact", contactUs)
+  app.use("/api/v1/property", property)
 
   return app;
 }
