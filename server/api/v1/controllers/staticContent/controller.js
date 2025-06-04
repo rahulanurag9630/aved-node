@@ -19,8 +19,7 @@ const {
   updateStaticContent,
   getAllStaticContent,
   getAllStaticContentByType,
-  deleteAllStaticContent,
-  deleteStaticContent
+  deleteAllStaticContent
 } = staticContentServices;
 
 export class staticController {
@@ -92,7 +91,7 @@ export class staticController {
   async addStaticContent(req, res, next) {
     const validationSchema = Joi.object({
       contentType: Joi.string().required(),
-      title: Joi.string().optional(),
+      title: Joi.string().required(),
       title_ar: Joi.string().optional(),
       description: Joi.string().optional(),
       description_ar: Joi.string().optional(),
@@ -411,66 +410,6 @@ export class staticController {
       return next(error);
     }
   }
-
-  /**
-  * @swagger
-  * /staticContent/deleteStaticContent:
-  *   delete:
-  *     tags: [STATIC CONTENT]
-  *     summary: Delete a single static content entry
-  *     description: Permanently delete a static content entry by ID from the database.
-  *     produces:
-  *       - application/json
-  *     parameters:
-  *       - name: authToken
-  *         description: ADMIN token
-  *         in: header
-  *         required: true
-  *       - name: id
-  *         description: The ID of the static content to delete
-  *         in: query
-  *         required: true
-  *         type: string
-  *     responses:
-  *       200:
-  *         description: Content deleted successfully
-  *       401:
-  *         description: Unauthorized or user not found
-  *       404:
-  *         description: Content not found
-  */
-  async deleteStaticContent(req, res, next) {
-    try {
-      // Admin authentication check
-      const authCheck = await findUser({
-        _id: req.userId,
-        status: status.ACTIVE,
-        userType: { $ne: userType.USER },
-      });
-
-      if (!authCheck) {
-        throw apiError.notFound(responseMessage.USER_NOT_FOUND);
-      }
-      console.log(req.body)
-      const { id } = req.body;
-
-      if (!id) {
-        throw apiError.badRequest("ID is required to delete static content.");
-      }
-
-      const result = await deleteStaticContent(id);
-
-      if (result.deletedCount === 0) {
-        throw apiError.notFound(responseMessage.CONTENT_NOT_FOUND || "Static content not found");
-      }
-
-      return res.json(new response({}, responseMessage.STATIC_CONTENT_DELETED || "Static content deleted successfully"));
-    } catch (error) {
-      console.log("❌ Error Occurred in deleteStaticContent -->", error);
-      return next(error);
-    }
-  }
-
 
 }
 

@@ -6,7 +6,7 @@ import responseMessage from '../../assets/responseMessage';
 
 module.exports = {
   verifyToken(req, res, next) {
-    const token = req.headers.authToken || req.headers.token || req.headers.authtoken;
+    const token = req.headers.authToken || req.headers.token;
 
     console.log(req.headers)
     if (token) {
