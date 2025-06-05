@@ -357,6 +357,82 @@ export class adminController {
       return next(error);
     }
   }
+
+  /**
+ * @swagger
+ * /admin/update:
+ *   put:
+ *     tags:
+ *       - ADMIN
+ *     summary: Update admin details
+ *     description: Update logged-in admin profile details
+ *     consumes:
+ *       - application/json
+ *     parameters:
+ *       - in: body
+ *         name: body
+ *         required: true
+ *         schema:
+ *           type: object
+ *           required:
+ *             - adminId
+ *           properties:
+ *             adminId:
+ *               type: string
+ *               example: "665fed55e27171c98c94a5b7"
+ *             name:
+ *               type: string
+ *               example: "Admin Updated"
+ *             email:
+ *               type: string
+ *               example: "admin@example.com"
+ *             phoneNumber:
+ *               type: string
+ *               example: "9876543210"
+ *     responses:
+ *       200:
+ *         description: Admin profile updated successfully
+ */
+
+async updateAdminDetails(req, res, next) {
+  const validationSchema = Joi.object({
+    adminId: Joi.string().required(),
+    name: Joi.string().optional(),
+    email: Joi.string().email().optional(),
+    profilePic: Joi.string().optional(),
+  });
+
+  try {
+    const { error, value: validatedBody } = validationSchema.validate(req.body);
+    if (error) return next(error);
+
+    const { adminId, name, email, profilePic } = validatedBody;
+
+    const admin = await findUser({
+      _id: adminId,
+      userType: { $ne: userType.USER },
+      status: { $ne: status.DELETE }
+    });
+
+    if (!admin) {
+      throw apiError.notFound(responseMessage.USER_NOT_FOUND);
+    }
+
+    // Update only provided fields
+    const updatedFields = {};
+    if (name) updatedFields.name = name;
+    if (email) updatedFields.email = email.toLowerCase();
+    if (profilePic) updatedFields.profilePic = profilePic;
+
+    const updatedAdmin = await updateUser({ _id: adminId }, updatedFields);
+
+    return res.json(new response(updatedAdmin, responseMessage.UPDATE_SUCCESS));
+  } catch (err) {
+    console.log("Error in updateAdminDetails:", err);
+    return next(err);
+  }
+}
+
   /**
  * @swagger
  * /admin/forgetPassword:
@@ -1141,6 +1217,75 @@ export class adminController {
   }
 
   /**
+ * @swagger
+ * /admin/blogs:
+ *   get:
+ *     tags:
+ *       - BLOG MANAGEMENT
+ *     summary: Public listing of all blogs
+ *     description: Retrieve a list of all blogs with optional search and pagination. Only ACTIVE blogs are returned.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: search
+ *         description: Search by blog title
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Blogs listed successfully
+ *       500:
+ *         description: Internal Server Error
+ */
+async listPublicBlogs(req, res, next) {
+  const validationSchema = Joi.object({
+    search: Joi.string().optional(),
+    page: Joi.number().optional().default(1),
+    limit: Joi.number().optional().default(10),
+  });
+
+  try {
+    const validatedBody = await validationSchema.validateAsync(req.query);
+
+    const query = {
+      status: "ACTIVE", // Public should see only ACTIVE blogs
+    };
+
+    if (validatedBody.search) {
+      query.title = { $regex: validatedBody.search, $options: "i" };
+    }
+
+    const options = {
+      page: validatedBody.page,
+      limit: validatedBody.limit,
+      sort: { createdAt: -1 },
+    };
+
+    const blogs = await blogServices.paginateBlogs(query, options);
+
+    if (!blogs.docs.length) {
+      throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+    }
+
+    return res.json(new response(blogs, responseMessage.DATA_FOUND));
+  } catch (error) {
+    console.error("❌ Error in listPublicBlogs --->>", error);
+    return next(error);
+  }
+}
+
+
+  /**
    * @swagger
    * /admin/addOrUpdateTeam:
    *   post:
@@ -1440,6 +1585,74 @@ export class adminController {
     }
   }
 
+    /**
+   * @swagger
+   * /admin/publicList:
+   *   get:
+   *     tags:
+   *       - TEAM MANAGEMENT (Public)
+   *     summary: Public listing of all team members
+   *     description: Anyone can retrieve a paginated list of team members. Only ACTIVE team members are returned.
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: search
+   *         description: Search by name or position
+   *         in: query
+   *         required: false
+   *       - name: page
+   *         description: Page number
+   *         in: query
+   *         type: integer
+   *         required: false
+   *       - name: limit
+   *         description: Number of items per page
+   *         in: query
+   *         type: integer
+   *         required: false
+   *     responses:
+   *       200:
+   *         description: Team listed successfully
+   *       500:
+   *         description: Internal Server Error
+   */
+  async publicList(req, res, next) {
+    const validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
+
+    try {
+      const validatedBody = await validationSchema.validateAsync(req.query);
+
+      const query = { status: "ACTIVE" };
+
+      if (validatedBody.search) {
+        query.$or = [
+          { name: { $regex: validatedBody.search, $options: "i" } },
+          { position: { $regex: validatedBody.search, $options: "i" } },
+        ];
+      }
+
+      const options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      const teamList = await teamServices.paginateTeams(query, options);
+
+      if (!teamList.docs.length) {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(teamList, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in publicListTeam --->>", error);
+      return next(error);
+    }
+  }
 
 
 

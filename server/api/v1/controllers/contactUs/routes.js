@@ -5,6 +5,8 @@ import upload from '../../../../helper/uploadHandler';
 
 
 export default Express.Router()
+
+// .post('/createContactUs', controller.createContactUs)
     .use(auth.verifyToken)
     .get('/listContactUs', controller.listContactUs)
     .get('/viewcontactus', controller.viewcontactus)
