@@ -400,14 +400,14 @@ async getAdminDetails(req, res, next) {
         responseMessage: "Please provide token.",
       });
     }
-    const adminId = req.params._id;
+
+    const adminId = req.query.adminId;
 
     if (!adminId) {
-      return res.status(400).json({
-        responseCode: 400,
-        responseMessage: "Admin ID is required",
-      });
+     
+       throw apiError.badRequest("Admin ID is required");
     }
+
     const admin = await findUser({
       _id: adminId,
       userType: { $ne: userType.USER },
@@ -415,25 +415,30 @@ async getAdminDetails(req, res, next) {
     });
 
     if (!admin) {
-      return res.status(404).json({
-        responseCode: 404,
-        responseMessage: "Admin not found",
-      });
+    
+       throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
     }
-
-    return res.status(200).json({
-      responseCode: 200,
-      responseMessage: "Details fetched successfully",
-      data: admin,
-    });
+const data= {
+        name: admin.name || "",
+        email: admin.email || "",
+        profilePic: admin.profilePic || "",
+      }
+   
+    //   responseCode: 200,
+    //   responseMessage: "Details fetched successfully",
+    //   data: {
+    //     name: admin.name || "",
+    //     email: admin.email || "",
+    //     profilePic: admin.profilePic || "",
+    //   },
+    // });
+              return res.json(new response(data, responseMessage.DETAILS_FETCHED));
 
   } catch (error) {
-    console.log("Error in getAdminDetails:", error);
+    console.error("Error in getAdminDetails:", error);
     return next(error);
   }
 }
-
-
   /**
  * @swagger
  * /admin/forgetPassword:
