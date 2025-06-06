@@ -360,78 +360,79 @@ export class adminController {
 
   /**
  * @swagger
- * /admin/update:
- *   put:
+ * /admin/details/{id}:
+ *   get:
  *     tags:
  *       - ADMIN
- *     summary: Update admin details
- *     description: Update logged-in admin profile details
- *     consumes:
- *       - application/json
+ *     summary: Get admin details by ID
+ *     description: Requires admin authentication
  *     parameters:
- *       - in: body
- *         name: body
+ *       - in: path
+ *         name: id
  *         required: true
  *         schema:
- *           type: object
- *           required:
- *             - adminId
- *           properties:
- *             adminId:
- *               type: string
- *               example: "665fed55e27171c98c94a5b7"
- *             name:
- *               type: string
- *               example: "Admin Updated"
- *             email:
- *               type: string
- *               example: "admin@example.com"
- *             phoneNumber:
- *               type: string
- *               example: "9876543210"
+ *           type: string
+ *         description: The ID of the admin
+ *       - in: header
+ *         name: authToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bearer token of the logged-in admin
  *     responses:
  *       200:
- *         description: Admin profile updated successfully
+ *         description: Admin details fetched successfully
+ *       400:
+ *         description: Please provide token
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
  */
 
-async updateAdminDetails(req, res, next) {
-  const validationSchema = Joi.object({
-    adminId: Joi.string().required(),
-    name: Joi.string().optional(),
-    email: Joi.string().email().optional(),
-    profilePic: Joi.string().optional(),
-  });
-
+async getAdminDetails(req, res, next) {
   try {
-    const { error, value: validatedBody } = validationSchema.validate(req.body);
-    if (error) return next(error);
+    const authHeader = req.headers.token;
 
-    const { adminId, name, email, profilePic } = validatedBody;
+    if (!authHeader) {
+      return res.status(400).json({
+        responseCode: 400,
+        responseMessage: "Please provide token.",
+      });
+    }
+    const adminId = req.params._id;
 
+    if (!adminId) {
+      return res.status(400).json({
+        responseCode: 400,
+        responseMessage: "Admin ID is required",
+      });
+    }
     const admin = await findUser({
       _id: adminId,
       userType: { $ne: userType.USER },
-      status: { $ne: status.DELETE }
+      status: { $ne: status.DELETE },
     });
 
     if (!admin) {
-      throw apiError.notFound(responseMessage.USER_NOT_FOUND);
+      return res.status(404).json({
+        responseCode: 404,
+        responseMessage: "Admin not found",
+      });
     }
 
-    // Update only provided fields
-    const updatedFields = {};
-    if (name) updatedFields.name = name;
-    if (email) updatedFields.email = email.toLowerCase();
-    if (profilePic) updatedFields.profilePic = profilePic;
+    return res.status(200).json({
+      responseCode: 200,
+      responseMessage: "Details fetched successfully",
+      data: admin,
+    });
 
-    const updatedAdmin = await updateUser({ _id: adminId }, updatedFields);
-
-    return res.json(new response(updatedAdmin, responseMessage.UPDATE_SUCCESS));
-  } catch (err) {
-    console.log("Error in updateAdminDetails:", err);
-    return next(err);
+  } catch (error) {
+    console.log("Error in getAdminDetails:", error);
+    return next(error);
   }
 }
+
 
   /**
  * @swagger

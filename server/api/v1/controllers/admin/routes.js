@@ -5,7 +5,7 @@ import auth from "../../../../helper/auth";
 export default Express.Router()
 
   .post("/login", adminController.login)
-  .put("/updateAdminDetails", adminController.updateAdminDetails)
+  .get("/getAdminDetails", adminController.getAdminDetails)
   .post("/forgetPassword", adminController.forgotPassword)
   .post("/verifyOtp", adminController.verifyOtp)
   .put("/resentOtp", adminController.resentOtp)
