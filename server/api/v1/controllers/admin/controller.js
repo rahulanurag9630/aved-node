@@ -415,7 +415,6 @@ async getAdminDetails(req, res, next) {
     });
 
     if (!admin) {
-    
        throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
     }
 const data= {
@@ -423,15 +422,6 @@ const data= {
         email: admin.email || "",
         profilePic: admin.profilePic || "",
       }
-   
-    //   responseCode: 200,
-    //   responseMessage: "Details fetched successfully",
-    //   data: {
-    //     name: admin.name || "",
-    //     email: admin.email || "",
-    //     profilePic: admin.profilePic || "",
-    //   },
-    // });
               return res.json(new response(data, responseMessage.DETAILS_FETCHED));
 
   } catch (error) {
@@ -439,6 +429,98 @@ const data= {
     return next(error);
   }
 }
+
+/**
+ * @swagger
+ * /admin/details/{id}:
+ *   put:
+ *     tags:
+ *       - ADMIN
+ *     summary: Update admin details by ID
+ *     description: Requires admin authentication
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the admin
+ *       - in: header
+ *         name: authToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bearer token of the logged-in admin
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               profilePic:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Admin details updated successfully
+ *       400:
+ *         description: Missing or invalid parameters
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
+ */
+
+async updateAdminDetails(req, res, next) {
+  try {
+    const authHeader = req.headers.token;
+
+    if (!authHeader) {
+      throw apiError.badRequest("Please provide token.");
+    }
+
+     const adminId = req.query.adminId;
+    if (!adminId) {
+      throw apiError.badRequest("Admin ID is required");
+    }
+
+    const { name, email, profilePic } = req.body;
+
+    if (!name || !email) {
+      throw apiError.badRequest("Name and Email are required");
+    }
+
+    const admin = await findUser({
+      _id: adminId,
+      userType: { $ne: userType.USER },
+      status: { $ne: status.DELETE },
+    });
+
+    if (!admin) {
+      throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+    }
+
+    admin.name = name.trim();
+    admin.email = email.trim().toLowerCase();
+    if (profilePic) {
+      admin.profilePic = profilePic;
+    }
+
+    await admin.save();
+
+    return res.json(new response({}, responseMessage.PROFILE_UPDATED));
+  } catch (error) {
+    console.error("Error in updateAdminDetails:", error);
+    return next(error);
+  }
+}
+
+
+
   /**
  * @swagger
  * /admin/forgetPassword:
@@ -1207,7 +1289,7 @@ const data= {
         page: validatedBody.page,
         limit: validatedBody.limit,
         sort: { createdAt: -1 },
-      };
+      }; 
 
       const blogs = await blogServices.paginateBlogs(query, options);
 

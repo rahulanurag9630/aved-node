@@ -16,6 +16,7 @@ const userSchema = new Mongoose.Schema(
     provider: { type: String },
  name: { type: String },
     email: { type: String, unique: true, sparse: true },
+     profilePic: { type: String },
     mobileNumber: { type: String, unique: true, sparse: true },
     password: { type: String, required: false },
     permissions: { type: Object},

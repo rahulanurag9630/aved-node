@@ -6,6 +6,7 @@ export default Express.Router()
 
   .post("/login", adminController.login)
   .get("/getAdminDetails", adminController.getAdminDetails)
+  .post("/updateAdminDetails", adminController.updateAdminDetails)
   .post("/forgetPassword", adminController.forgotPassword)
   .post("/verifyOtp", adminController.verifyOtp)
   .put("/resentOtp", adminController.resentOtp)
