@@ -483,7 +483,8 @@ async updateAdminDetails(req, res, next) {
       throw apiError.badRequest("Please provide token.");
     }
 
-     const adminId = req.query.adminId;
+     const adminId = req.body.adminId;
+     console.log("dskfjkdjf,",adminId)
     if (!adminId) {
       throw apiError.badRequest("Admin ID is required");
     }
