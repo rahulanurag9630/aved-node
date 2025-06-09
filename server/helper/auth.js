@@ -37,6 +37,7 @@ module.exports = {
         }
       })
     } else {
+      console.log("here")
       throw apiError.badRequest(responseMessage.NO_TOKEN);
     }
   },
