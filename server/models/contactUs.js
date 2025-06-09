@@ -17,6 +17,7 @@ var contactUsSchema = new schema(
         },
         name: { type: String },
         email: { type: String },
+        phoneNumber: { type: String },
         message: { type: String },
         attachFile:  { type: String },
         replayMessage: {
