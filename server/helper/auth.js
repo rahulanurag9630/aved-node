@@ -6,14 +6,17 @@ import responseMessage from '../../assets/responseMessage';
 
 module.exports = {
   verifyToken(req, res, next) {
-    const token = req.headers.authToken || req.headers.authtoken;
+    const token = req.headers.authToken || req.headers.token || req.headers.authtoken;
+
+    console.log(req.headers)
     if (token) {
       jwt.verify(token, process.env.JWT_SECRET, async (err, result) => {
         if (err) {
           return res.send({ responseCode: 401, responseMessage: "Invalid token", responseResult: err });
         }
         else {
-          var result2 = await userModel.findOne({_id: result._id})
+          var result2 = await userModel.findOne({ _id: result._id })
+          console.log(result2)
           if (!result2) {
             return res.send({ responseCode: 404, responseMessage: "User not found." });
           }
@@ -34,10 +37,11 @@ module.exports = {
         }
       })
     } else {
+      console.log("here")
       throw apiError.badRequest(responseMessage.NO_TOKEN);
     }
   },
-  
+
   verifyTokenBySocket: (token) => {
     return new Promise((resolve, reject) => {
       try {

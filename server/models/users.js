@@ -14,7 +14,9 @@ const userSchema = new Mongoose.Schema(
     },
     socialId: { type: String,  unique: true, sparse: true    },
     provider: { type: String },
+ name: { type: String },
     email: { type: String, unique: true, sparse: true },
+     profilePic: { type: String },
     mobileNumber: { type: String, unique: true, sparse: true },
     password: { type: String, required: false },
     permissions: { type: Object},
@@ -56,9 +58,7 @@ const userSchema = new Mongoose.Schema(
       type: Boolean,
       default: false
     },
-    fullName: {
-      type: String,
-    }
+  
   },
   { timestamps: true }
 );
@@ -79,7 +79,8 @@ Mongoose.model("users", userSchema)
         mobileNumber: "+91 1234567890",
         password: bcrypt.hashSync("aved@1"),
         isVerified: true,
-        socialId: "ADMIN"
+        socialId: "ADMIN",
+        name: "Vipul"
       };
       return Mongoose.model("users", userSchema).create(userObj);
     }

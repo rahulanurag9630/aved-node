@@ -10,7 +10,14 @@ import commonFunction from "../../../../helper/util";
 import { notificationServices } from "../../services/notification";
 import { amenitiesServices } from '../../services/amenities';
 import { blogServices } from "../../services/blog";
+import { teamServices } from "../../services/team";
+import teamModel from "../../../../models/team";
+import propertyModel from "../../../../models/property";
+import propertyViewModel from "../../../../models/views"; // path may vary
+import contactUsModel from "../../../../models/contactUs";
 import blogModel from "../../../../models/blog";
+import moment from "moment"
+
 const {
   createNotification, findNotification,
 } = notificationServices;
@@ -354,6 +361,171 @@ export class adminController {
       return next(error);
     }
   }
+
+  /**
+ * @swagger
+ * /admin/details/{id}:
+ *   get:
+ *     tags:
+ *       - ADMIN
+ *     summary: Get admin details by ID
+ *     description: Requires admin authentication
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the admin
+ *       - in: header
+ *         name: authToken
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bearer token of the logged-in admin
+ *     responses:
+ *       200:
+ *         description: Admin details fetched successfully
+ *       400:
+ *         description: Please provide token
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
+ */
+
+  async getAdminDetails(req, res, next) {
+    try {
+      const authHeader = req.headers.token;
+
+      if (!authHeader) {
+        return res.status(400).json({
+          responseCode: 400,
+          responseMessage: "Please provide token.",
+        });
+      }
+
+      const adminId = req.query.adminId;
+
+      if (!adminId) {
+
+        throw apiError.badRequest("Admin ID is required");
+      }
+
+      const admin = await findUser({
+        _id: adminId,
+        userType: { $ne: userType.USER },
+        status: { $ne: status.DELETE },
+      });
+
+      if (!admin) {
+        throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+      }
+      const data = {
+        name: admin.name || "",
+        email: admin.email || "",
+        profilePic: admin.profilePic || "",
+      }
+      return res.json(new response(data, responseMessage.DETAILS_FETCHED));
+
+    } catch (error) {
+      console.error("Error in getAdminDetails:", error);
+      return next(error);
+    }
+  }
+
+  /**
+   * @swagger
+   * /admin/details/{id}:
+   *   put:
+   *     tags:
+   *       - ADMIN
+   *     summary: Update admin details by ID
+   *     description: Requires admin authentication
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the admin
+   *       - in: header
+   *         name: authToken
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Bearer token of the logged-in admin
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               email:
+   *                 type: string
+   *               profilePic:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Admin details updated successfully
+   *       400:
+   *         description: Missing or invalid parameters
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: Admin not found
+   */
+
+  async updateAdminDetails(req, res, next) {
+    try {
+      const authHeader = req.headers.token;
+
+      if (!authHeader) {
+        throw apiError.badRequest("Please provide token.");
+      }
+
+      const adminId = req.body.adminId;
+      console.log("dskfjkdjf,", adminId)
+      if (!adminId) {
+        throw apiError.badRequest("Admin ID is required");
+      }
+
+      const { name, email, profilePic } = req.body;
+
+      if (!name || !email) {
+        throw apiError.badRequest("Name and Email are required");
+      }
+
+      const admin = await findUser({
+        _id: adminId,
+        userType: { $ne: userType.USER },
+        status: { $ne: status.DELETE },
+      });
+
+      if (!admin) {
+        throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+      }
+
+      admin.name = name.trim();
+      admin.email = email.trim().toLowerCase();
+      if (profilePic) {
+        admin.profilePic = profilePic;
+      }
+
+      await admin.save();
+
+      return res.json(new response({}, responseMessage.PROFILE_UPDATED));
+    } catch (error) {
+      console.error("Error in updateAdminDetails:", error);
+      return next(error);
+    }
+  }
+
+
+
   /**
  * @swagger
  * /admin/forgetPassword:
@@ -683,7 +855,7 @@ export class adminController {
         result = await amenitiesServices.addAmenities(validatedBody);
       }
 
-      return res.json(new response(result, responseMessage.SUCCESS));
+      return res.json(new response(result, responseMessage.AMENITIE_ADD_UPDATED_SUCESS));
     } catch (error) {
       console.log("❌ Error occurred at addUpdateAmenity --->>", error);
       return next(error);
@@ -783,11 +955,11 @@ export class adminController {
     *         in: query
     *         required: false
     *       - name: fromDate
-    *         description: fromDate
+    *         description: fromDate (ISO string or YYYY-MM-DD)
     *         in: query
     *         required: false
     *       - name: toDate
-    *         description: toDate
+    *         description: toDate (ISO string or YYYY-MM-DD)
     *         in: query
     *         required: false
     *       - name: page
@@ -802,7 +974,7 @@ export class adminController {
     *         required: false
     *     responses:
     *       200:
-    *         description: Data found successfully .
+    *         description: Data found successfully.
     *       401:
     *         description: Invalid file format
     */
@@ -811,9 +983,12 @@ export class adminController {
     let validationSchema = Joi.object({
       search: Joi.string().optional(),
       status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
+      fromDate: Joi.date().optional(),
+      toDate: Joi.date().optional(),
       page: Joi.number().optional().default(1),
       limit: Joi.number().optional().default(10),
     });
+
     try {
       let validatedBody = await validationSchema.validateAsync(req.query);
 
@@ -833,6 +1008,20 @@ export class adminController {
         query.status = validatedBody.status;
       }
 
+      // Date filter
+      if (validatedBody.fromDate || validatedBody.toDate) {
+        query.createdAt = {};
+        if (validatedBody.fromDate) {
+          query.createdAt.$gte = new Date(validatedBody.fromDate);
+        }
+        if (validatedBody.toDate) {
+          // To include the entire toDate day, set time to 23:59:59
+          let toDate = new Date(validatedBody.toDate);
+          toDate.setHours(23, 59, 59, 999);
+          query.createdAt.$lte = toDate;
+        }
+      }
+
       // Pagination options
       let options = {
         page: validatedBody.page,
@@ -850,6 +1039,7 @@ export class adminController {
       return next(error);
     }
   }
+
 
   /**
   * @swagger
@@ -912,8 +1102,6 @@ export class adminController {
 
     try {
       // Check if authToken is present
-      const authToken = req.headers.authtoken;
-      if (!authToken) return next(apiError.unauthorized("authToken is required."));
 
       const { error, value: validatedBody } = validationSchema.validate(req.body);
       if (error) return next(apiError.badRequest(error.message));
@@ -967,8 +1155,6 @@ export class adminController {
     try {
       const { error, value } = schema.validate(req.body);
       if (error) return next(apiError.badRequest(error.message));
-      const authToken = req.headers.authtoken;
-      if (!authToken) return next(apiError.unauthorized("authToken is required."));
       const blog = await blogModel.findById(value.id);
       if (!blog) return next(apiError.notFound("Blog not found"));
       const newStatus = blog.status === status.ACTIVE ? status.BLOCK : status.ACTIVE;
@@ -1044,6 +1230,624 @@ export class adminController {
       return next(err);
     }
   };
+
+
+  /**
+ * @swagger
+ * /admin/listBlogs:
+ *   get:
+ *     tags:
+ *       - BLOG MANAGEMENT
+ *     summary: Listing of all blogs using admin token
+ *     description: Retrieve a list of blogs with optional filters and pagination.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         description: Admin access token
+ *         in: header
+ *         required: true
+ *       - name: search
+ *         description: Search by blog title
+ *         in: query
+ *         required: false
+ *       - name: status
+ *         description: Blog status (ACTIVE, BLOCK, DELETE)
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Blogs listed successfully
+ *       401:
+ *         description: Unauthorized access
+ */
+
+  async listBlogs(req, res, next) {
+    const validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
+    try {
+      const validatedBody = await validationSchema.validateAsync(req.query);
+
+      const query = {};
+      if (validatedBody.search) {
+        query.title = { $regex: validatedBody.search, $options: "i" };
+      }
+      if (validatedBody.status) {
+        query.status = validatedBody.status;
+      }
+
+      const options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      const blogs = await blogServices.paginateBlogs(query, options);
+
+      if (!blogs.docs.length) {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(blogs, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in listBlogs --->>", error);
+      return next(error);
+    }
+  }
+
+  /**
+ * @swagger
+ * /admin/blogs:
+ *   get:
+ *     tags:
+ *       - BLOG MANAGEMENT
+ *     summary: Public listing of all blogs
+ *     description: Retrieve a list of all blogs with optional search and pagination. Only ACTIVE blogs are returned.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: search
+ *         description: Search by blog title
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Blogs listed successfully
+ *       500:
+ *         description: Internal Server Error
+ */
+  async listPublicBlogs(req, res, next) {
+    const validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
+
+    try {
+      const validatedBody = await validationSchema.validateAsync(req.query);
+
+      const query = {
+        status: "ACTIVE", // Public should see only ACTIVE blogs
+      };
+
+      if (validatedBody.search) {
+        query.title = { $regex: validatedBody.search, $options: "i" };
+      }
+
+      const options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      const blogs = await blogServices.paginateBlogs(query, options);
+
+      if (!blogs.docs.length) {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(blogs, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in listPublicBlogs --->>", error);
+      return next(error);
+    }
+  }
+
+
+  /**
+   * @swagger
+   * /admin/addOrUpdateTeam:
+   *   post:
+   *     tags:
+   *       - TEAM
+   *     description: Add or update a team member
+   *     summary: Add or update team
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: authToken
+   *         in: header
+   *         required: true
+   *         type: string
+   *       - name: id
+   *         in: formData
+   *         required: false
+   *         type: string
+   *       - name: name
+   *         in: formData
+   *         required: true
+   *         type: string
+   *       - name: position
+   *         in: formData
+   *         required: true
+   *         type: string
+   *       - name: thoughts
+   *         in: formData
+   *         required: true
+   *         type: string
+   *       - name: facebook
+   *         in: formData
+   *         required: false
+   *         type: string
+   *       - name: instagram
+   *         in: formData
+   *         required: false
+   *         type: string
+   *       - name: linkedin
+   *         in: formData
+   *         required: false
+   *         type: string
+   *       - name: image
+   *         in: formData
+   *         required: false
+   *         type: string
+   *       - name: status
+   *         in: formData
+   *         required: false
+   *         type: string
+   *     responses:
+   *       200:
+   *         description: Team member added or updated successfully
+   */
+
+  async addOrUpdateTeam(req, res, next) {
+    const validationSchema = Joi.object({
+      id: Joi.string().allow("", null).optional(),
+      name: Joi.string().required(),
+      position: Joi.string().required(),
+      thoughts: Joi.string().required(),
+      facebook: Joi.string().optional().allow(""),
+      instagram: Joi.string().optional().allow(""),
+      linkedin: Joi.string().optional().allow(""),
+      image: Joi.string().optional(),
+    });
+
+    try {
+      const { error, value: validatedBody } = validationSchema.validate(req.body);
+      if (error) return next(apiError.badRequest(error.message));
+
+      // Clean up the `id` field if it's empty
+      const isUpdate = validatedBody.id && validatedBody.id.trim() !== "";
+      if (!isUpdate) {
+        delete validatedBody.id;
+      }
+
+      let teamMember;
+      if (isUpdate) {
+        // Update existing team member
+        teamMember = await teamServices.updateTeam(validatedBody.id, validatedBody);
+        return res.json(new response(teamMember, "Team member updated successfully"));
+      } else {
+        // Add new team member
+        teamMember = await teamServices.addTeam(validatedBody);
+        return res.json(new response(teamMember, "Team member added successfully"));
+      }
+    } catch (err) {
+      console.log("Error occurred at addOrUpdateTeam ---->>>", err);
+      return next(err);
+    }
+  }
+
+  /**
+   * @swagger
+   * /admin/toggleBlockTeamStatus:
+   *   post:
+   *     tags:
+   *       - TEAM
+   *     description: Block or unblock a team member (status toggle between ACTIVE and BLOCK)
+   *     summary: Toggle team member status
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: authToken
+   *         in: header
+   *         required: true
+   *         type: string
+   *       - name: id
+   *         in: formData
+   *         required: true
+   *         type: string
+   *     responses:
+   *       200:
+   *         description: Team member status updated
+   */
+
+  async toggleBlockTeamStatus(req, res, next) {
+    const schema = Joi.object({
+      id: Joi.string().required()
+    });
+
+    try {
+      const { error, value } = schema.validate(req.body);
+      if (error) return next(apiError.badRequest(error.message));
+
+      const teamMember = await teamModel.findById(value.id);
+      if (!teamMember) return next(apiError.notFound("Team member not found"));
+
+      const newStatus = teamMember.status === status.ACTIVE ? status.BLOCK : status.ACTIVE;
+
+      const updatedTeam = await teamServices.updateTeam(value.id, {
+        status: newStatus
+      });
+
+      return res.json(
+        new response(
+          {
+            id: updatedTeam._id,
+            name: updatedTeam.name,
+            position: updatedTeam.position,
+            status: updatedTeam.status,
+            updatedAt: updatedTeam.updatedAt
+          },
+          `Team member has been ${newStatus === status.BLOCK ? "blocked" : "unblocked"} successfully`
+        )
+      );
+    } catch (err) {
+      console.error("Error in toggleBlockTeamStatus ---->>>", err);
+      return next(err);
+    }
+  }
+
+
+  /**
+   * @swagger
+   * /admin/deleteTeam:
+   *   post:
+   *     tags:
+   *       - TEAM
+   *     summary: Permanently delete a team member
+   *     description: Hard delete a team member from the database
+   *     parameters:
+   *       - name: authToken
+   *         in: header
+   *         required: true
+   *         type: string
+   *       - name: id
+   *         in: formData
+   *         required: true
+   *         type: string
+   *     responses:
+   *       200:
+   *         description: Team member deleted successfully
+   */
+  async deleteTeam(req, res, next) {
+    const schema = Joi.object({
+      id: Joi.string().required()
+    });
+
+    try {
+      const { error, value } = schema.validate(req.body);
+      if (error) return next(apiError.badRequest(error.message));
+
+      const teamMember = await teamModel.findById(value.id);
+      if (!teamMember) return next(apiError.notFound("Team member not found"));
+
+      const deletedTeam = await teamServices.deleteTeamById(value.id);
+
+      return res.json(
+        new response(
+          {
+            id: deletedTeam._id,
+            name: deletedTeam.name,
+            position: deletedTeam.position,
+            deletedAt: new Date()
+          },
+          "Team member has been deleted permanently"
+        )
+      );
+    } catch (err) {
+      console.log("Error in deleteTeam ---->>>", err);
+      return next(err);
+    }
+  }
+
+
+  /**
+   * @swagger
+   * /admin/listTeam:
+   *   get:
+   *     tags:
+   *       - TEAM MANAGEMENT
+   *     summary: Listing of all team members using admin token
+   *     description: Retrieve a list of team members with optional filters and pagination.
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: authToken
+   *         description: Admin access token
+   *         in: header
+   *         required: true
+   *       - name: search
+   *         description: Search by name or position
+   *         in: query
+   *         required: false
+   *       - name: status
+   *         description: Team member status (ACTIVE, BLOCK, DELETE)
+   *         in: query
+   *         required: false
+   *       - name: page
+   *         description: Page number
+   *         in: query
+   *         type: integer
+   *         required: false
+   *       - name: limit
+   *         description: Number of items per page
+   *         in: query
+   *         type: integer
+   *         required: false
+   *     responses:
+   *       200:
+   *         description: Team listed successfully
+   *       401:
+   *         description: Unauthorized access
+   */
+
+  async listTeam(req, res, next) {
+    const validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
+
+    try {
+      const validatedBody = await validationSchema.validateAsync(req.query);
+
+      // Verify admin access
+      const adminData = await findUser({
+        _id: req.userId,
+        userType: { $in: [userType.ADMIN, userType.SUBADMIN] },
+      });
+
+      if (!adminData) throw apiError.unauthorized(responseMessage.UNAUTHORIZED);
+
+      // Build query
+      const query = {};
+      if (validatedBody.search) {
+        query.$or = [
+          { name: { $regex: validatedBody.search, $options: "i" } },
+          { position: { $regex: validatedBody.search, $options: "i" } },
+        ];
+      }
+      if (validatedBody.status) {
+        query.status = validatedBody.status;
+      }
+
+      // Pagination options
+      const options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      // Fetch paginated team members
+      const teamList = await teamServices.paginateTeams(query, options);
+
+      if (!teamList.docs.length) {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(teamList, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in listTeam --->>", error);
+      return next(error);
+    }
+  }
+
+  /**
+ * @swagger
+ * /admin/publicList:
+ *   get:
+ *     tags:
+ *       - TEAM MANAGEMENT (Public)
+ *     summary: Public listing of all team members
+ *     description: Anyone can retrieve a paginated list of team members. Only ACTIVE team members are returned.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: search
+ *         description: Search by name or position
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Team listed successfully
+ *       500:
+ *         description: Internal Server Error
+ */
+  async publicList(req, res, next) {
+    const validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
+
+    try {
+      const validatedBody = await validationSchema.validateAsync(req.query);
+
+      const query = { status: "ACTIVE" };
+
+      if (validatedBody.search) {
+        query.$or = [
+          { name: { $regex: validatedBody.search, $options: "i" } },
+          { position: { $regex: validatedBody.search, $options: "i" } },
+        ];
+      }
+
+      const options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      const teamList = await teamServices.paginateTeams(query, options);
+
+      if (!teamList.docs.length) {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(teamList, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in publicListTeam --->>", error);
+      return next(error);
+    }
+  }
+
+  /**
+ * @swagger
+ * /admin/getDashboardData:
+ *   get:
+ *     tags:
+ *       - DASHBOARD MANAGEMENT (Public)
+ *     summary: Dashboard overview data
+ *     description: Admins can retrieve overall statistics like property counts, contact messages, blog counts, and property views.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         description: Admin access token
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Dashboard data retrieved successfully
+ *       500:
+ *         description: Internal Server Error
+ */
+
+
+  async getDashboardData(req, res, next) {
+    try {
+      const totalPublishedProperty = await propertyModel.countDocuments({
+        publish_status: { $regex: /^Published$/, $options: 'i' }
+      });
+
+      const totalDraftProperty = await propertyModel.countDocuments({
+        publish_status: { $regex: /^Draft$/, $options: 'i' }
+      });
+
+      const totalContactUs = await contactUsModel.countDocuments();
+      const totalBlogs = await blogModel.countDocuments();
+
+      // 🗓️ Daily Property Views - Last 7 Days
+      const sevenDaysAgo = moment().subtract(6, 'days').startOf('day').toDate();
+
+      const dailyViews = await propertyViewModel.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: sevenDaysAgo }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+            },
+            views: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]);
+
+      // 🗓️ Monthly Property Views - Current Year
+      const startOfYear = moment().startOf('year').toDate();
+      const monthlyViews = await propertyViewModel.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startOfYear }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" }
+            },
+            views: { $sum: 1 }
+          }
+        },
+        { $sort: { "_id.month": 1 } },
+        {
+          $project: {
+            _id: 0,
+            month: "$_id.month",
+            views: 1
+          }
+        }
+      ]);
+
+      return res.json(new response({
+        totalPublishedProperty,
+        totalDraftProperty,
+        totalContactUs,
+        totalBlogs,
+        dailyViews,
+        monthlyViews
+      }, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in getDashboardData --->>", error);
+      return next(error);
+    }
+  }
+
+
+
+
 }
 
 export default new adminController();

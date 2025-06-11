@@ -9,6 +9,9 @@ import commonFunction from "../../../../helper/util";
 import _ from "lodash";
 import bcrypt from "bcryptjs";
 
+
+
+
 import { userServices } from "../../services/user";
 const {
   checkUserExists,
@@ -1572,85 +1575,85 @@ export class userController {
       return next(error);
     }
   }
-   /**
-     * @swagger
-     * /user/userResetPassword:
-     *   post:
-     *     tags:
-     *       - User
-     *     description: resetPassword
-     *     summary: resetPassword of the user
-     *     produces:
-     *       - application/json
-     *     parameters:
-     *       - name: authToken
-     *         description: token
-     *         in: header
-     *         required: false
-     *       - name: newPassword
-     *         description: newPassword
-     *         in: formData
-     *         required: true
-     *       - name: confirmPassword
-     *         description: confirmPassword
-     *         in: formData
-     *         required: true
-     *     responses:
-     *       200:
-     *         description: Your password has been successfully changed.
-     *       404:
-     *         description: This user does not exist.
-     *       422:
-     *         description: Password not matched.
-     *       500:
-     *         description: Internal Server Error
-     *       501:
-     *         description: Something went wrong!
-     */
-    async resetPassword(req, res, next) {
-      const validationSchema = Joi.object({
-        newPassword: Joi.string().required(),
-        confirmPassword: Joi.string().required(),
+  /**
+    * @swagger
+    * /user/userResetPassword:
+    *   post:
+    *     tags:
+    *       - User
+    *     description: resetPassword
+    *     summary: resetPassword of the user
+    *     produces:
+    *       - application/json
+    *     parameters:
+    *       - name: authToken
+    *         description: token
+    *         in: header
+    *         required: false
+    *       - name: newPassword
+    *         description: newPassword
+    *         in: formData
+    *         required: true
+    *       - name: confirmPassword
+    *         description: confirmPassword
+    *         in: formData
+    *         required: true
+    *     responses:
+    *       200:
+    *         description: Your password has been successfully changed.
+    *       404:
+    *         description: This user does not exist.
+    *       422:
+    *         description: Password not matched.
+    *       500:
+    *         description: Internal Server Error
+    *       501:
+    *         description: Something went wrong!
+    */
+  async resetPassword(req, res, next) {
+    const validationSchema = Joi.object({
+      newPassword: Joi.string().required(),
+      confirmPassword: Joi.string().required(),
+    });
+    try {
+      const { error, value: validatedBody } = validationSchema.validate(req.body);
+      if (error) return next(error);
+      const { newPassword, confirmPassword } = validatedBody;
+      // const {
+      //   newPassword,
+      //   confirmPassword
+      // } = await Joi.validate(
+      //   req.body,
+      //   validationSchema
+      // );
+      var userResult = await findUser({
+        _id: req.userId,
+        userType: {
+          $ne: userType.ADMIN
+        },
+        status: status.ACTIVE,
       });
-      try {
-        const { error, value: validatedBody } = validationSchema.validate(req.body);
-        if (error) return next(error);
-        const {newPassword , confirmPassword} = validatedBody;
-        // const {
-        //   newPassword,
-        //   confirmPassword
-        // } = await Joi.validate(
-        //   req.body,
-        //   validationSchema
-        // );
-        var userResult = await findUser({
-          _id: req.userId,
-          userType: {
-            $ne: userType.ADMIN
-          },
-          status: status.ACTIVE,
-        });
-        if (!userResult) {
-          throw apiError.notFound(responseMessage.USER_NOT_FOUND);
+      if (!userResult) {
+        throw apiError.notFound(responseMessage.USER_NOT_FOUND);
+      } else {
+        if (newPassword == confirmPassword) {
+          let update = await updateUser({
+            _id: userResult._id
+          }, {
+            password: bcrypt.hashSync(newPassword)
+          });
+          update = _.omit(JSON.parse(JSON.stringify(update)), ["otp", "password", "base64", "secretGoogle", "emailotp2FA", "withdrawOtp", "password"])
+
+          return res.json(new response(update, responseMessage.PWD_CHANGED));
         } else {
-          if (newPassword == confirmPassword) {
-            let update = await updateUser({
-              _id: userResult._id
-            }, {
-              password: bcrypt.hashSync(newPassword)
-            });
-            update = _.omit(JSON.parse(JSON.stringify(update)), ["otp", "password", "base64", "secretGoogle", "emailotp2FA", "withdrawOtp", "password"])
-  
-            return res.json(new response(update, responseMessage.PWD_CHANGED));
-          } else {
-            throw apiError.notFound(responseMessage.PWD_NOT_MATCH);
-          }
+          throw apiError.notFound(responseMessage.PWD_NOT_MATCH);
         }
-      } catch (error) {
-        console.log("❌ Error Occured at ResetPassword USER ---> ",error);
-        return next(error);
       }
+    } catch (error) {
+      console.log("❌ Error Occured at ResetPassword USER ---> ", error);
+      return next(error);
     }
+  }
 }
 
 export default new userController();

@@ -65,6 +65,7 @@ module.exports = {
         pass: process.env.NODEMAILER_PASSWORD,
       },
     });
+    console.log(process.env.NODEMAILER_EMAIL)
     var mailOptions = {
       from: "<do_not_reply@gmail.com>",
       to: email,
