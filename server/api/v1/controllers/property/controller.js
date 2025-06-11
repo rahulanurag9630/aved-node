@@ -5,6 +5,7 @@ import responseMessage from "../../../../../assets/responseMessage";
 import { propertyServices } from "../../services/property";
 import { userServices } from "../../services/user";
 import userType from "../../../../enums/userType";
+import { propertyViewServices } from "../../services/view";
 
 const { findUser } = userServices;
 
@@ -779,6 +780,61 @@ export class propertyController {
         }
     }
 
+    /**
+     * @swagger
+     * /property/createView:
+     *   post:
+     *     summary: Create a property view
+     *     description: Records a view for a property by propertyId.
+     *     tags: [PropertyView]
+     *     parameters:
+     *       - name: authToken
+     *         in: header
+     *         required: true
+     *         description: Auth token
+     *         type: string
+     *       - in: body
+     *         name: body
+     *         required: true
+     *         description: propertyId to create a view for
+     *         schema:
+     *           type: object
+     *           properties:
+     *             propertyId:
+     *               type: string
+     *               example: "666b12345c9ef9..."
+     *     responses:
+     *       '200':
+     *         description: Property view created successfully.
+     *       '400':
+     *         description: Bad Request.
+     *       '500':
+     *         description: Internal Server Error.
+     */
+    async createView(req, res, next) {
+        const schema = Joi.object({
+            propertyId: Joi.string().required(),
+        });
+
+        const { error, value } = schema.validate(req.body);
+        if (error) return next(apiError.badRequest(error.details[0].message));
+
+        try {
+            const view = await propertyViewServices.createView(value);
+            // 2. Get the current property
+            const property = await propertyServices.getPropertyById(value.propertyId);
+            if (!property) return next(apiError.notFound("Property not found"));
+
+            // 3. Increment views using updateProperty
+            await propertyServices.updateProperty(value.propertyId, {
+                views: (property.views || 0) + 1
+            });
+
+            return res.json({ message: "View recorded successfully", view });
+        } catch (err) {
+            return next(err);
+        }
+    }
 
 }
 

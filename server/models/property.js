@@ -109,6 +109,10 @@ const propertySchema = new schema(
             type: String,
             enum: ["published", "draft", "Published", "Draft"],
             default: "draft"
+        },
+        views: {
+            type: Number,
+            default: 0
         }
     },
     options

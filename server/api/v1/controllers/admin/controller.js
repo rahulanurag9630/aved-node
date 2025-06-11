@@ -10,9 +10,13 @@ import commonFunction from "../../../../helper/util";
 import { notificationServices } from "../../services/notification";
 import { amenitiesServices } from '../../services/amenities';
 import { blogServices } from "../../services/blog";
-import blogModel from "../../../../models/blog";
 import { teamServices } from "../../services/team";
 import teamModel from "../../../../models/team";
+import propertyModel from "../../../../models/property";
+import propertyViewModel from "../../../../models/views"; // path may vary
+import contactUsModel from "../../../../models/contactUs";
+import blogModel from "../../../../models/blog";
+import moment from "moment"
 
 const {
   createNotification, findNotification,
@@ -390,135 +394,135 @@ export class adminController {
  *         description: Admin not found
  */
 
-async getAdminDetails(req, res, next) {
-  try {
-    const authHeader = req.headers.token;
+  async getAdminDetails(req, res, next) {
+    try {
+      const authHeader = req.headers.token;
 
-    if (!authHeader) {
-      return res.status(400).json({
-        responseCode: 400,
-        responseMessage: "Please provide token.",
+      if (!authHeader) {
+        return res.status(400).json({
+          responseCode: 400,
+          responseMessage: "Please provide token.",
+        });
+      }
+
+      const adminId = req.query.adminId;
+
+      if (!adminId) {
+
+        throw apiError.badRequest("Admin ID is required");
+      }
+
+      const admin = await findUser({
+        _id: adminId,
+        userType: { $ne: userType.USER },
+        status: { $ne: status.DELETE },
       });
-    }
 
-    const adminId = req.query.adminId;
-
-    if (!adminId) {
-     
-       throw apiError.badRequest("Admin ID is required");
-    }
-
-    const admin = await findUser({
-      _id: adminId,
-      userType: { $ne: userType.USER },
-      status: { $ne: status.DELETE },
-    });
-
-    if (!admin) {
-       throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
-    }
-const data= {
+      if (!admin) {
+        throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+      }
+      const data = {
         name: admin.name || "",
         email: admin.email || "",
         profilePic: admin.profilePic || "",
       }
-              return res.json(new response(data, responseMessage.DETAILS_FETCHED));
+      return res.json(new response(data, responseMessage.DETAILS_FETCHED));
 
-  } catch (error) {
-    console.error("Error in getAdminDetails:", error);
-    return next(error);
+    } catch (error) {
+      console.error("Error in getAdminDetails:", error);
+      return next(error);
+    }
   }
-}
 
-/**
- * @swagger
- * /admin/details/{id}:
- *   put:
- *     tags:
- *       - ADMIN
- *     summary: Update admin details by ID
- *     description: Requires admin authentication
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the admin
- *       - in: header
- *         name: authToken
- *         required: true
- *         schema:
- *           type: string
- *         description: Bearer token of the logged-in admin
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *               profilePic:
- *                 type: string
- *     responses:
- *       200:
- *         description: Admin details updated successfully
- *       400:
- *         description: Missing or invalid parameters
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Admin not found
- */
+  /**
+   * @swagger
+   * /admin/details/{id}:
+   *   put:
+   *     tags:
+   *       - ADMIN
+   *     summary: Update admin details by ID
+   *     description: Requires admin authentication
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the admin
+   *       - in: header
+   *         name: authToken
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Bearer token of the logged-in admin
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               email:
+   *                 type: string
+   *               profilePic:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Admin details updated successfully
+   *       400:
+   *         description: Missing or invalid parameters
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: Admin not found
+   */
 
-async updateAdminDetails(req, res, next) {
-  try {
-    const authHeader = req.headers.token;
+  async updateAdminDetails(req, res, next) {
+    try {
+      const authHeader = req.headers.token;
 
-    if (!authHeader) {
-      throw apiError.badRequest("Please provide token.");
+      if (!authHeader) {
+        throw apiError.badRequest("Please provide token.");
+      }
+
+      const adminId = req.body.adminId;
+      console.log("dskfjkdjf,", adminId)
+      if (!adminId) {
+        throw apiError.badRequest("Admin ID is required");
+      }
+
+      const { name, email, profilePic } = req.body;
+
+      if (!name || !email) {
+        throw apiError.badRequest("Name and Email are required");
+      }
+
+      const admin = await findUser({
+        _id: adminId,
+        userType: { $ne: userType.USER },
+        status: { $ne: status.DELETE },
+      });
+
+      if (!admin) {
+        throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+      }
+
+      admin.name = name.trim();
+      admin.email = email.trim().toLowerCase();
+      if (profilePic) {
+        admin.profilePic = profilePic;
+      }
+
+      await admin.save();
+
+      return res.json(new response({}, responseMessage.PROFILE_UPDATED));
+    } catch (error) {
+      console.error("Error in updateAdminDetails:", error);
+      return next(error);
     }
-
-     const adminId = req.body.adminId;
-     console.log("dskfjkdjf,",adminId)
-    if (!adminId) {
-      throw apiError.badRequest("Admin ID is required");
-    }
-
-    const { name, email, profilePic } = req.body;
-
-    if (!name || !email) {
-      throw apiError.badRequest("Name and Email are required");
-    }
-
-    const admin = await findUser({
-      _id: adminId,
-      userType: { $ne: userType.USER },
-      status: { $ne: status.DELETE },
-    });
-
-    if (!admin) {
-      throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
-    }
-
-    admin.name = name.trim();
-    admin.email = email.trim().toLowerCase();
-    if (profilePic) {
-      admin.profilePic = profilePic;
-    }
-
-    await admin.save();
-
-    return res.json(new response({}, responseMessage.PROFILE_UPDATED));
-  } catch (error) {
-    console.error("Error in updateAdminDetails:", error);
-    return next(error);
   }
-}
 
 
 
@@ -1290,7 +1294,7 @@ async updateAdminDetails(req, res, next) {
         page: validatedBody.page,
         limit: validatedBody.limit,
         sort: { createdAt: -1 },
-      }; 
+      };
 
       const blogs = await blogServices.paginateBlogs(query, options);
 
@@ -1336,42 +1340,42 @@ async updateAdminDetails(req, res, next) {
  *       500:
  *         description: Internal Server Error
  */
-async listPublicBlogs(req, res, next) {
-  const validationSchema = Joi.object({
-    search: Joi.string().optional(),
-    page: Joi.number().optional().default(1),
-    limit: Joi.number().optional().default(10),
-  });
+  async listPublicBlogs(req, res, next) {
+    const validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
 
-  try {
-    const validatedBody = await validationSchema.validateAsync(req.query);
+    try {
+      const validatedBody = await validationSchema.validateAsync(req.query);
 
-    const query = {
-      status: "ACTIVE", // Public should see only ACTIVE blogs
-    };
+      const query = {
+        status: "ACTIVE", // Public should see only ACTIVE blogs
+      };
 
-    if (validatedBody.search) {
-      query.title = { $regex: validatedBody.search, $options: "i" };
+      if (validatedBody.search) {
+        query.title = { $regex: validatedBody.search, $options: "i" };
+      }
+
+      const options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      const blogs = await blogServices.paginateBlogs(query, options);
+
+      if (!blogs.docs.length) {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(blogs, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in listPublicBlogs --->>", error);
+      return next(error);
     }
-
-    const options = {
-      page: validatedBody.page,
-      limit: validatedBody.limit,
-      sort: { createdAt: -1 },
-    };
-
-    const blogs = await blogServices.paginateBlogs(query, options);
-
-    if (!blogs.docs.length) {
-      throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
-    }
-
-    return res.json(new response(blogs, responseMessage.DATA_FOUND));
-  } catch (error) {
-    console.error("❌ Error in listPublicBlogs --->>", error);
-    return next(error);
   }
-}
 
 
   /**
@@ -1674,37 +1678,37 @@ async listPublicBlogs(req, res, next) {
     }
   }
 
-    /**
-   * @swagger
-   * /admin/publicList:
-   *   get:
-   *     tags:
-   *       - TEAM MANAGEMENT (Public)
-   *     summary: Public listing of all team members
-   *     description: Anyone can retrieve a paginated list of team members. Only ACTIVE team members are returned.
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: search
-   *         description: Search by name or position
-   *         in: query
-   *         required: false
-   *       - name: page
-   *         description: Page number
-   *         in: query
-   *         type: integer
-   *         required: false
-   *       - name: limit
-   *         description: Number of items per page
-   *         in: query
-   *         type: integer
-   *         required: false
-   *     responses:
-   *       200:
-   *         description: Team listed successfully
-   *       500:
-   *         description: Internal Server Error
-   */
+  /**
+ * @swagger
+ * /admin/publicList:
+ *   get:
+ *     tags:
+ *       - TEAM MANAGEMENT (Public)
+ *     summary: Public listing of all team members
+ *     description: Anyone can retrieve a paginated list of team members. Only ACTIVE team members are returned.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: search
+ *         description: Search by name or position
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Team listed successfully
+ *       500:
+ *         description: Internal Server Error
+ */
   async publicList(req, res, next) {
     const validationSchema = Joi.object({
       search: Joi.string().optional(),
@@ -1742,6 +1746,105 @@ async listPublicBlogs(req, res, next) {
       return next(error);
     }
   }
+
+  /**
+ * @swagger
+ * /admin/getDashboardData:
+ *   get:
+ *     tags:
+ *       - DASHBOARD MANAGEMENT (Public)
+ *     summary: Dashboard overview data
+ *     description: Admins can retrieve overall statistics like property counts, contact messages, blog counts, and property views.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         description: Admin access token
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Dashboard data retrieved successfully
+ *       500:
+ *         description: Internal Server Error
+ */
+
+
+  async getDashboardData(req, res, next) {
+    try {
+      const totalPublishedProperty = await propertyModel.countDocuments({
+        publish_status: { $regex: /^Published$/, $options: 'i' }
+      });
+
+      const totalDraftProperty = await propertyModel.countDocuments({
+        publish_status: { $regex: /^Draft$/, $options: 'i' }
+      });
+
+      const totalContactUs = await contactUsModel.countDocuments();
+      const totalBlogs = await blogModel.countDocuments();
+
+      // 🗓️ Daily Property Views - Last 7 Days
+      const sevenDaysAgo = moment().subtract(6, 'days').startOf('day').toDate();
+
+      const dailyViews = await propertyViewModel.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: sevenDaysAgo }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+            },
+            views: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ]);
+
+      // 🗓️ Monthly Property Views - Current Year
+      const startOfYear = moment().startOf('year').toDate();
+      const monthlyViews = await propertyViewModel.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startOfYear }
+          }
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" }
+            },
+            views: { $sum: 1 }
+          }
+        },
+        { $sort: { "_id.month": 1 } },
+        {
+          $project: {
+            _id: 0,
+            month: "$_id.month",
+            views: 1
+          }
+        }
+      ]);
+
+      return res.json(new response({
+        totalPublishedProperty,
+        totalDraftProperty,
+        totalContactUs,
+        totalBlogs,
+        dailyViews,
+        monthlyViews
+      }, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in getDashboardData --->>", error);
+      return next(error);
+    }
+  }
+
 
 
 

@@ -5,6 +5,7 @@ export default Express.Router()
 
     .get("/listPropertiesUser", propertyController.listPropertiesUserPublic)
     .post("/getPropertyById", propertyController.getPropertyById)
+    .post("/createView", propertyController.createView)
 
 
     .use(auth.verifyToken)
