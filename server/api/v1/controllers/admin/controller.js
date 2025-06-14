@@ -1278,7 +1278,10 @@ export class adminController {
       status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
       page: Joi.number().optional().default(1),
       limit: Joi.number().optional().default(10),
+      fromDate: Joi.date().iso().optional(), // expects YYYY-MM-DD format
+      toDate: Joi.date().iso().optional(),
     });
+
     try {
       const validatedBody = await validationSchema.validateAsync(req.query);
 
@@ -1286,8 +1289,23 @@ export class adminController {
       if (validatedBody.search) {
         query.title = { $regex: validatedBody.search, $options: "i" };
       }
+
       if (validatedBody.status) {
         query.status = validatedBody.status;
+      }
+
+      // Filter based on createdAt using fromDate and toDate
+      if (validatedBody.fromDate || validatedBody.toDate) {
+        query.createdAt = {};
+        if (validatedBody.fromDate) {
+          query.createdAt.$gte = new Date(validatedBody.fromDate);
+        }
+        if (validatedBody.toDate) {
+          // Add 1 day to include the full 'toDate'
+          const toDate = new Date(validatedBody.toDate);
+          toDate.setDate(toDate.getDate() + 1);
+          query.createdAt.$lt = toDate;
+        }
       }
 
       const options = {
@@ -1307,6 +1325,7 @@ export class adminController {
       console.error("❌ Error in listBlogs --->>", error);
       return next(error);
     }
+
   }
 
   /**
@@ -1632,6 +1651,8 @@ export class adminController {
       status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
       page: Joi.number().optional().default(1),
       limit: Joi.number().optional().default(10),
+      fromDate: Joi.date().iso().optional(),
+      toDate: Joi.date().iso().optional(),
     });
 
     try {
@@ -1647,14 +1668,29 @@ export class adminController {
 
       // Build query
       const query = {};
+
       if (validatedBody.search) {
         query.$or = [
           { name: { $regex: validatedBody.search, $options: "i" } },
           { position: { $regex: validatedBody.search, $options: "i" } },
         ];
       }
+
       if (validatedBody.status) {
         query.status = validatedBody.status;
+      }
+
+      // Filter by createdAt range
+      if (validatedBody.fromDate || validatedBody.toDate) {
+        query.createdAt = {};
+        if (validatedBody.fromDate) {
+          query.createdAt.$gte = new Date(validatedBody.fromDate);
+        }
+        if (validatedBody.toDate) {
+          const toDate = new Date(validatedBody.toDate);
+          toDate.setDate(toDate.getDate() + 1); // include full day
+          query.createdAt.$lt = toDate;
+        }
       }
 
       // Pagination options
@@ -1676,6 +1712,7 @@ export class adminController {
       console.error("❌ Error in listTeam --->>", error);
       return next(error);
     }
+
   }
 
   /**
@@ -1774,71 +1811,134 @@ export class adminController {
   async getDashboardData(req, res, next) {
     try {
       const totalPublishedProperty = await propertyModel.countDocuments({
-        publish_status: { $regex: /^Published$/, $options: 'i' }
+        publish_status: { $regex: /^Published$/, $options: 'i' },
       });
 
       const totalDraftProperty = await propertyModel.countDocuments({
-        publish_status: { $regex: /^Draft$/, $options: 'i' }
+        publish_status: { $regex: /^Draft$/, $options: 'i' },
       });
 
       const totalContactUs = await contactUsModel.countDocuments();
       const totalBlogs = await blogModel.countDocuments();
 
-      // 🗓️ Daily Property Views - Last 7 Days
+      // 📅 7-Days (Daily Chart)
       const sevenDaysAgo = moment().subtract(6, 'days').startOf('day').toDate();
-
       const dailyViews = await propertyViewModel.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: sevenDaysAgo }
-          }
-        },
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
         {
           $group: {
             _id: {
-              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
             },
-            views: { $sum: 1 }
-          }
+            views: { $sum: 1 },
+          },
         },
-        { $sort: { _id: 1 } }
+        { $sort: { _id: 1 } },
       ]);
 
-      // 🗓️ Monthly Property Views - Current Year
-      const startOfYear = moment().startOf('year').toDate();
-      const monthlyViews = await propertyViewModel.aggregate([
+      const dailyInquiries = await contactUsModel.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
         {
-          $match: {
-            createdAt: { $gte: startOfYear }
-          }
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+            count: { $sum: 1 },
+          },
         },
+        { $sort: { _id: 1 } },
+      ]);
+
+      const last7Days = [...Array(7)].map((_, i) =>
+        moment().subtract(6 - i, "days").format("YYYY-MM-DD")
+      );
+
+      const dailyChartData = {
+        categories: last7Days.map((d) => `${d}T00:00:00.000Z`),
+        views: last7Days.map((d) => {
+          const match = dailyViews.find((v) => v._id === d);
+          return match ? match.views : 0;
+        }),
+        inquiries: last7Days.map((d) => {
+          const match = dailyInquiries.find((v) => v._id === d);
+          return match ? match.count : 0;
+        }),
+      };
+
+      // 📅 Monthly (12 Months)
+      const startOfYear = moment().startOf('year').toDate();
+
+      const monthlyViews = await propertyViewModel.aggregate([
+        { $match: { createdAt: { $gte: startOfYear } } },
         {
           $group: {
             _id: {
               year: { $year: "$createdAt" },
-              month: { $month: "$createdAt" }
+              month: { $month: "$createdAt" },
             },
-            views: { $sum: 1 }
-          }
+            views: { $sum: 1 },
+          },
         },
         { $sort: { "_id.month": 1 } },
-        {
-          $project: {
-            _id: 0,
-            month: "$_id.month",
-            views: 1
-          }
-        }
       ]);
 
-      return res.json(new response({
-        totalPublishedProperty,
-        totalDraftProperty,
-        totalContactUs,
-        totalBlogs,
-        dailyViews,
-        monthlyViews
-      }, responseMessage.DATA_FOUND));
+      const monthlyInquiries = await contactUsModel.aggregate([
+        { $match: { createdAt: { $gte: startOfYear } } },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.month": 1 } },
+      ]);
+
+      const months = [...Array(12)].map((_, i) =>
+        moment().month(i).startOf("month").format("YYYY-MM-DD")
+      );
+
+      const monthlyChartData = {
+        categories: months.map((m) => `${m}T00:00:00.000Z`),
+        views: months.map((m, index) => {
+          const monthNum = index + 1;
+          const match = monthlyViews.find((v) => v._id.month === monthNum);
+          return match ? match.views : 0;
+        }),
+        inquiries: months.map((m, index) => {
+          const monthNum = index + 1;
+          const match = monthlyInquiries.find((v) => v._id.month === monthNum);
+          return match ? match.count : 0;
+        }),
+      };
+      const topViewedProperties = await propertyModel
+        .find({ publish_status: { $regex: /^Published$/, $options: 'i' } })
+        .sort({ views: -1 })
+        .limit(4);
+
+      // 🆕 4 Recently Added Properties
+      const latestProperties = await propertyModel
+        .find({ publish_status: { $regex: /^Published$/, $options: 'i' } })
+        .sort({ createdAt: -1 })
+        .limit(4);
+
+      return res.json(
+        new response(
+          {
+            totalPublishedProperty,
+            totalDraftProperty,
+            totalContactUs,
+            totalBlogs,
+            dailyChartData,
+            monthlyChartData,
+            topViewedProperties,
+            latestProperties
+          },
+          responseMessage.DATA_FOUND
+        )
+      );
     } catch (error) {
       console.error("❌ Error in getDashboardData --->>", error);
       return next(error);

@@ -770,6 +770,15 @@ export class propertyController {
 
 
             // Fetch property
+            const view = await propertyViewServices.createView(value);
+            // 2. Get the current property
+            const property1 = await propertyServices.getPropertyById(value.propertyId);
+            if (!property1) return next(apiError.notFound("Property not found"));
+
+            // 3. Increment views using updateProperty
+            await propertyServices.updateProperty(value.propertyId, {
+                views: (property.views || 0) + 1
+            });
             const property = await propertyServices.getPropertyById(propertyId);
             if (!property) throw apiError.notFound("Property not found");
 
