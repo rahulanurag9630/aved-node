@@ -10,10 +10,11 @@ export default Express.Router()
   .post("/forgetPassword", adminController.forgotPassword)
   .post("/verifyOtp", adminController.verifyOtp)
   .put("/resentOtp", adminController.resentOtp)
- .get("/publicList", adminController.publicList)
- .get("/getBlogById", adminController.getBlogById)
+  .get("/listPublicBlogs", adminController.listPublicBlogs)
+  .get("/publicList", adminController.publicList)
+  .get("/listBlogs", adminController.listBlogs)
+  .get("/getBlogById", adminController.getBlogById)
 
- 
   .use(auth.verifyToken)
   .get("/listAllUsers", adminController.listAllUsers)
   .post("/changePassword", adminController.changePassword)
@@ -25,11 +26,11 @@ export default Express.Router()
   .patch("/toggleAmenityStatus", adminController.toggleAmenityStatus)
   .post("/toggleBlockStatus", adminController.toggleBlockStatus)
   .post("/deleteBlog", adminController.deleteBlog)
-  .get("/listBlogs", adminController.listBlogs)
   .post("/addOrUpdateTeam", adminController.addOrUpdateTeam)
   .get("/listTeam", adminController.listTeam)
   .post("/toggleBlockTeamStatus", adminController.toggleBlockTeamStatus)
   .post("/deleteTeam", adminController.deleteTeam)
+  .get("/getDashboardData", adminController.getDashboardData)
 
 
 

@@ -10,9 +10,13 @@ import commonFunction from "../../../../helper/util";
 import { notificationServices } from "../../services/notification";
 import { amenitiesServices } from '../../services/amenities';
 import { blogServices } from "../../services/blog";
-import blogModel from "../../../../models/blog";
 import { teamServices } from "../../services/team";
 import teamModel from "../../../../models/team";
+import propertyModel from "../../../../models/property";
+import propertyViewModel from "../../../../models/views"; // path may vary
+import contactUsModel from "../../../../models/contactUs";
+import blogModel from "../../../../models/blog";
+import moment from "moment"
 
 const {
   createNotification, findNotification,
@@ -390,135 +394,135 @@ export class adminController {
  *         description: Admin not found
  */
 
-async getAdminDetails(req, res, next) {
-  try {
-    const authHeader = req.headers.token;
+  async getAdminDetails(req, res, next) {
+    try {
+      const authHeader = req.headers.token;
 
-    if (!authHeader) {
-      return res.status(400).json({
-        responseCode: 400,
-        responseMessage: "Please provide token.",
+      if (!authHeader) {
+        return res.status(400).json({
+          responseCode: 400,
+          responseMessage: "Please provide token.",
+        });
+      }
+
+      const adminId = req.query.adminId;
+
+      if (!adminId) {
+
+        throw apiError.badRequest("Admin ID is required");
+      }
+
+      const admin = await findUser({
+        _id: adminId,
+        userType: { $ne: userType.USER },
+        status: { $ne: status.DELETE },
       });
-    }
 
-    const adminId = req.query.adminId;
-
-    if (!adminId) {
-     
-       throw apiError.badRequest("Admin ID is required");
-    }
-
-    const admin = await findUser({
-      _id: adminId,
-      userType: { $ne: userType.USER },
-      status: { $ne: status.DELETE },
-    });
-
-    if (!admin) {
-       throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
-    }
-const data= {
+      if (!admin) {
+        throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+      }
+      const data = {
         name: admin.name || "",
         email: admin.email || "",
         profilePic: admin.profilePic || "",
       }
-              return res.json(new response(data, responseMessage.DETAILS_FETCHED));
+      return res.json(new response(data, responseMessage.DETAILS_FETCHED));
 
-  } catch (error) {
-    console.error("Error in getAdminDetails:", error);
-    return next(error);
+    } catch (error) {
+      console.error("Error in getAdminDetails:", error);
+      return next(error);
+    }
   }
-}
 
-/**
- * @swagger
- * /admin/details:
- *   put:
- *     tags:
- *       - ADMIN
- *     summary: Update admin details by ID
- *     description: Requires admin authentication
- cd   *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the admin
- *       - in: header
- *         name: authToken
- *         required: true
- *         schema:
- *           type: string
- *         description: Bearer token of the logged-in admin
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *               profilePic:
- *                 type: string
- *     responses:
- *       200:
- *         description: Admin details updated successfully
- *       400:
- *         description: Missing or invalid parameters
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: Admin not found
- */
+  /**
+   * @swagger
+   * /admin/details/{id}:
+   *   put:
+   *     tags:
+   *       - ADMIN
+   *     summary: Update admin details by ID
+   *     description: Requires admin authentication
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the admin
+   *       - in: header
+   *         name: authToken
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Bearer token of the logged-in admin
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               email:
+   *                 type: string
+   *               profilePic:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Admin details updated successfully
+   *       400:
+   *         description: Missing or invalid parameters
+   *       401:
+   *         description: Unauthorized
+   *       404:
+   *         description: Admin not found
+   */
 
-async updateAdminDetails(req, res, next) {
-  try {
-    const authHeader = req.headers.token;
+  async updateAdminDetails(req, res, next) {
+    try {
+      const authHeader = req.headers.token;
 
-    if (!authHeader) {
-      throw apiError.badRequest("Please provide token.");
+      if (!authHeader) {
+        throw apiError.badRequest("Please provide token.");
+      }
+
+      const adminId = req.body.adminId;
+      console.log("dskfjkdjf,", adminId)
+      if (!adminId) {
+        throw apiError.badRequest("Admin ID is required");
+      }
+
+      const { name, email, profilePic } = req.body;
+
+      if (!name || !email) {
+        throw apiError.badRequest("Name and Email are required");
+      }
+
+      const admin = await findUser({
+        _id: adminId,
+        userType: { $ne: userType.USER },
+        status: { $ne: status.DELETE },
+      });
+
+      if (!admin) {
+        throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
+      }
+
+      admin.name = name.trim();
+      admin.email = email.trim().toLowerCase();
+      if (profilePic) {
+        admin.profilePic = profilePic;
+      }
+
+      await admin.save();
+
+      return res.json(new response({}, responseMessage.PROFILE_UPDATED));
+    } catch (error) {
+      console.error("Error in updateAdminDetails:", error);
+      return next(error);
     }
-
-     const adminId = req.body.adminId;
-     console.log("dskfjkdjf,",adminId)
-    if (!adminId) {
-      throw apiError.badRequest("Admin ID is required");
-    }
-
-    const { name, email, profilePic } = req.body;
-
-    if (!name || !email) {
-      throw apiError.badRequest("Name and Email are required");
-    }
-
-    const admin = await findUser({
-      _id: adminId,
-      userType: { $ne: userType.USER },
-      status: { $ne: status.DELETE },
-    });
-
-    if (!admin) {
-      throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
-    }
-
-    admin.name = name.trim();
-    admin.email = email.trim().toLowerCase();
-    if (profilePic) {
-      admin.profilePic = profilePic;
-    }
-
-    await admin.save();
-
-    return res.json(new response({}, responseMessage.PROFILE_UPDATED));
-  } catch (error) {
-    console.error("Error in updateAdminDetails:", error);
-    return next(error);
   }
-}
 
 
 
@@ -1274,7 +1278,10 @@ async updateAdminDetails(req, res, next) {
       status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
       page: Joi.number().optional().default(1),
       limit: Joi.number().optional().default(10),
+      fromDate: Joi.date().iso().optional(), // expects YYYY-MM-DD format
+      toDate: Joi.date().iso().optional(),
     });
+
     try {
       const validatedBody = await validationSchema.validateAsync(req.query);
 
@@ -1282,15 +1289,30 @@ async updateAdminDetails(req, res, next) {
       if (validatedBody.search) {
         query.title = { $regex: validatedBody.search, $options: "i" };
       }
+
       if (validatedBody.status) {
         query.status = validatedBody.status;
+      }
+
+      // Filter based on createdAt using fromDate and toDate
+      if (validatedBody.fromDate || validatedBody.toDate) {
+        query.createdAt = {};
+        if (validatedBody.fromDate) {
+          query.createdAt.$gte = new Date(validatedBody.fromDate);
+        }
+        if (validatedBody.toDate) {
+          // Add 1 day to include the full 'toDate'
+          const toDate = new Date(validatedBody.toDate);
+          toDate.setDate(toDate.getDate() + 1);
+          query.createdAt.$lt = toDate;
+        }
       }
 
       const options = {
         page: validatedBody.page,
         limit: validatedBody.limit,
         sort: { createdAt: -1 },
-      }; 
+      };
 
       const blogs = await blogServices.paginateBlogs(query, options);
 
@@ -1303,11 +1325,12 @@ async updateAdminDetails(req, res, next) {
       console.error("❌ Error in listBlogs --->>", error);
       return next(error);
     }
+
   }
 
   /**
  * @swagger
- * /admin/blogs:
+ * /admin/listPublicBlogs:
  *   get:
  *     tags:
  *       - BLOG MANAGEMENT
@@ -1336,42 +1359,42 @@ async updateAdminDetails(req, res, next) {
  *       500:
  *         description: Internal Server Error
  */
-async listPublicBlogs(req, res, next) {
-  const validationSchema = Joi.object({
-    search: Joi.string().optional(),
-    page: Joi.number().optional().default(1),
-    limit: Joi.number().optional().default(10),
-  });
+  async listPublicBlogs(req, res, next) {
+    const validationSchema = Joi.object({
+      search: Joi.string().optional(),
+      page: Joi.number().optional().default(1),
+      limit: Joi.number().optional().default(10),
+    });
 
-  try {
-    const validatedBody = await validationSchema.validateAsync(req.query);
+    try {
+      const validatedBody = await validationSchema.validateAsync(req.query);
 
-    const query = {
-      status: "ACTIVE", 
-    };
+      const query = {
+        status: "ACTIVE", // Public should see only ACTIVE blogs
+      };
 
-    if (validatedBody.search) {
-      query.title = { $regex: validatedBody.search, $options: "i" };
+      if (validatedBody.search) {
+        query.title = { $regex: validatedBody.search, $options: "i" };
+      }
+
+      const options = {
+        page: validatedBody.page,
+        limit: validatedBody.limit,
+        sort: { createdAt: -1 },
+      };
+
+      const blogs = await blogServices.paginateBlogs(query, options);
+
+      if (!blogs.docs.length) {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(blogs, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in listPublicBlogs --->>", error);
+      return next(error);
     }
-
-    const options = {
-      page: validatedBody.page,
-      limit: validatedBody.limit,
-      sort: { createdAt: -1 },
-    };
-
-    const blogs = await blogServices.paginateBlogs(query, options);
-
-    if (!blogs.docs.length) {
-      throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
-    }
-
-    return res.json(new response(blogs, responseMessage.DATA_FOUND));
-  } catch (error) {
-    console.error("❌ Error in listPublicBlogs --->>", error);
-    return next(error);
   }
-}
 
 
 /**
@@ -1675,6 +1698,8 @@ async getBlogById(req, res, next) {
       status: Joi.string().valid("ACTIVE", "BLOCK", "DELETE").optional(),
       page: Joi.number().optional().default(1),
       limit: Joi.number().optional().default(10),
+      fromDate: Joi.date().iso().optional(),
+      toDate: Joi.date().iso().optional(),
     });
 
     try {
@@ -1690,14 +1715,29 @@ async getBlogById(req, res, next) {
 
       // Build query
       const query = {};
+
       if (validatedBody.search) {
         query.$or = [
           { name: { $regex: validatedBody.search, $options: "i" } },
           { position: { $regex: validatedBody.search, $options: "i" } },
         ];
       }
+
       if (validatedBody.status) {
         query.status = validatedBody.status;
+      }
+
+      // Filter by createdAt range
+      if (validatedBody.fromDate || validatedBody.toDate) {
+        query.createdAt = {};
+        if (validatedBody.fromDate) {
+          query.createdAt.$gte = new Date(validatedBody.fromDate);
+        }
+        if (validatedBody.toDate) {
+          const toDate = new Date(validatedBody.toDate);
+          toDate.setDate(toDate.getDate() + 1); // include full day
+          query.createdAt.$lt = toDate;
+        }
       }
 
       // Pagination options
@@ -1719,39 +1759,40 @@ async getBlogById(req, res, next) {
       console.error("❌ Error in listTeam --->>", error);
       return next(error);
     }
+
   }
 
-    /**
-   * @swagger
-   * /admin/publicList:
-   *   get:
-   *     tags:
-   *       - TEAM MANAGEMENT (Public)
-   *     summary: Public listing of all team members
-   *     description: Anyone can retrieve a paginated list of team members. Only ACTIVE team members are returned.
-   *     produces:
-   *       - application/json
-   *     parameters:
-   *       - name: search
-   *         description: Search by name or position
-   *         in: query
-   *         required: false
-   *       - name: page
-   *         description: Page number
-   *         in: query
-   *         type: integer
-   *         required: false
-   *       - name: limit
-   *         description: Number of items per page
-   *         in: query
-   *         type: integer
-   *         required: false
-   *     responses:
-   *       200:
-   *         description: Team listed successfully
-   *       500:
-   *         description: Internal Server Error
-   */
+  /**
+ * @swagger
+ * /admin/publicList:
+ *   get:
+ *     tags:
+ *       - TEAM MANAGEMENT (Public)
+ *     summary: Public listing of all team members
+ *     description: Anyone can retrieve a paginated list of team members. Only ACTIVE team members are returned.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: search
+ *         description: Search by name or position
+ *         in: query
+ *         required: false
+ *       - name: page
+ *         description: Page number
+ *         in: query
+ *         type: integer
+ *         required: false
+ *       - name: limit
+ *         description: Number of items per page
+ *         in: query
+ *         type: integer
+ *         required: false
+ *     responses:
+ *       200:
+ *         description: Team listed successfully
+ *       500:
+ *         description: Internal Server Error
+ */
   async publicList(req, res, next) {
     const validationSchema = Joi.object({
       search: Joi.string().optional(),
@@ -1790,7 +1831,214 @@ async getBlogById(req, res, next) {
     }
   }
 
+  /**
+ * @swagger
+ * /admin/getDashboardData:
+ *   get:
+ *     tags:
+ *       - DASHBOARD MANAGEMENT (Public)
+ *     summary: Dashboard overview data
+ *     description: Admins can retrieve overall statistics like property counts, contact messages, blog counts, and property views.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: authToken
+ *         in: header
+ *         description: Admin access token
+ *         required: true
+ *         type: string
+ *     responses:
+ *       200:
+ *         description: Dashboard data retrieved successfully
+ *       500:
+ *         description: Internal Server Error
+ */
 
+
+  async getDashboardData(req, res, next) {
+    try {
+      const totalPublishedProperty = await propertyModel.countDocuments({
+        publish_status: { $regex: /^Published$/, $options: 'i' },
+      });
+
+      const totalDraftProperty = await propertyModel.countDocuments({
+        publish_status: { $regex: /^Draft$/, $options: 'i' },
+      });
+
+      const totalContactUs = await contactUsModel.countDocuments();
+      const totalBlogs = await blogModel.countDocuments();
+
+      // 📅 7-Days (Daily Chart)
+      const sevenDaysAgo = moment().subtract(6, 'days').startOf('day').toDate();
+      const dailyViews = await propertyViewModel.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+            views: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]);
+
+      const dailyInquiries = await contactUsModel.aggregate([
+        { $match: { createdAt: { $gte: sevenDaysAgo } } },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]);
+
+      const last7Days = [...Array(7)].map((_, i) =>
+        moment().subtract(6 - i, "days").format("YYYY-MM-DD")
+      );
+
+      const dailyChartData = {
+        categories: last7Days.map((d) => `${d}T00:00:00.000Z`),
+        views: last7Days.map((d) => {
+          const match = dailyViews.find((v) => v._id === d);
+          return match ? match.views : 0;
+        }),
+        inquiries: last7Days.map((d) => {
+          const match = dailyInquiries.find((v) => v._id === d);
+          return match ? match.count : 0;
+        }),
+      };
+
+      // 📅 Monthly (12 Months)
+      const startOfYear = moment().startOf('year').toDate();
+
+      const monthlyViews = await propertyViewModel.aggregate([
+        { $match: { createdAt: { $gte: startOfYear } } },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            views: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.month": 1 } },
+      ]);
+
+      const monthlyInquiries = await contactUsModel.aggregate([
+        { $match: { createdAt: { $gte: startOfYear } } },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.month": 1 } },
+      ]);
+
+      const months = [...Array(12)].map((_, i) =>
+        moment().month(i).startOf("month").format("YYYY-MM-DD")
+      );
+
+      const monthlyChartData = {
+        categories: months.map((m) => `${m}T00:00:00.000Z`),
+        views: months.map((m, index) => {
+          const monthNum = index + 1;
+          const match = monthlyViews.find((v) => v._id.month === monthNum);
+          return match ? match.views : 0;
+        }),
+        inquiries: months.map((m, index) => {
+          const monthNum = index + 1;
+          const match = monthlyInquiries.find((v) => v._id.month === monthNum);
+          return match ? match.count : 0;
+        }),
+      };
+      const topViewedProperties = await propertyModel
+        .find({ publish_status: { $regex: /^Published$/, $options: 'i' } })
+        .sort({ views: -1 })
+        .limit(4);
+
+      // 🆕 4 Recently Added Properties
+      const latestProperties = await propertyModel
+        .find({ publish_status: { $regex: /^Published$/, $options: 'i' } })
+        .sort({ createdAt: -1 })
+        .limit(4);
+
+      return res.json(
+        new response(
+          {
+            totalPublishedProperty,
+            totalDraftProperty,
+            totalContactUs,
+            totalBlogs,
+            dailyChartData,
+            monthlyChartData,
+            topViewedProperties,
+            latestProperties
+          },
+          responseMessage.DATA_FOUND
+        )
+      );
+    } catch (error) {
+      console.error("❌ Error in getDashboardData --->>", error);
+      return next(error);
+    }
+  }
+
+
+  /**
+   * @swagger
+   * /admin/getBlogById:
+   *   get:
+   *     tags:
+   *       - BLOG MANAGEMENT
+   *     summary: Get a single blog by ID
+   *     description: Retrieve a specific blog using its MongoDB ID. Only ACTIVE blogs are returned.
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: id
+   *         in: path
+   *         required: true
+   *         description: The ID of the blog to retrieve
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Blog retrieved successfully
+   *       404:
+   *         description: Blog not found
+   *       500:
+   *         description: Internal Server Error
+   */
+  async getBlogById(req, res, next) {
+    try {
+      const { id } = req.query;
+
+      // Optional: validate ObjectId format if you're using MongoDB
+      if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        throw apiError.invalidId("Invalid blog ID format");
+      }
+
+      const blog = await blogServices.getBlogById(id);
+
+      if (!blog || blog.status !== "ACTIVE") {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(blog, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in getBlogById --->>", error);
+      return next(error);
+    }
+  }
 
 }
 
