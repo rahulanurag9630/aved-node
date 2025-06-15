@@ -3,15 +3,17 @@ import adminController from "./controller";
 import auth from "../../../../helper/auth";
 
 export default Express.Router()
-
+  .get("/listPublicBlogs", adminController.listPublicBlogs)
   .post("/login", adminController.login)
   .get("/getAdminDetails", adminController.getAdminDetails)
   .post("/updateAdminDetails", adminController.updateAdminDetails)
   .post("/forgetPassword", adminController.forgotPassword)
   .post("/verifyOtp", adminController.verifyOtp)
   .put("/resentOtp", adminController.resentOtp)
-  .get("/blogs", adminController.listPublicBlogs)
-   .get("/publicList", adminController.publicList)
+ .get("/publicList", adminController.publicList)
+ .get("/getBlogById", adminController.getBlogById)
+
+ 
   .use(auth.verifyToken)
   .get("/listAllUsers", adminController.listAllUsers)
   .post("/changePassword", adminController.changePassword)

@@ -432,13 +432,13 @@ const data= {
 
 /**
  * @swagger
- * /admin/details/{id}:
+ * /admin/details:
  *   put:
  *     tags:
  *       - ADMIN
  *     summary: Update admin details by ID
  *     description: Requires admin authentication
- *     parameters:
+ cd   *     parameters:
  *       - in: path
  *         name: id
  *         required: true
@@ -1347,7 +1347,7 @@ async listPublicBlogs(req, res, next) {
     const validatedBody = await validationSchema.validateAsync(req.query);
 
     const query = {
-      status: "ACTIVE", // Public should see only ACTIVE blogs
+      status: "ACTIVE", 
     };
 
     if (validatedBody.search) {
@@ -1373,6 +1373,53 @@ async listPublicBlogs(req, res, next) {
   }
 }
 
+
+/**
+ * @swagger
+ * /admin/getBlogById:
+ *   get:
+ *     tags:
+ *       - BLOG MANAGEMENT
+ *     summary: Get a single blog by ID
+ *     description: Retrieve a specific blog using its MongoDB ID. Only ACTIVE blogs are returned.
+ *     produces:
+ *       - application/json
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The ID of the blog to retrieve
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Blog retrieved successfully
+ *       404:
+ *         description: Blog not found
+ *       500:
+ *         description: Internal Server Error
+ */
+async getBlogById(req, res, next) {
+  try {
+    const { id } = req.query;
+
+    // Optional: validate ObjectId format if you're using MongoDB
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      throw apiError.invalidId("Invalid blog ID format");
+    }
+
+    const blog = await blogServices.getBlogById(id);
+
+    if (!blog || blog.status !== "ACTIVE") {
+      throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+    }
+
+    return res.json(new response(blog, responseMessage.DATA_FOUND));
+  } catch (error) {
+    console.error("❌ Error in getBlogById --->>", error);
+    return next(error);
+  }
+}
 
   /**
    * @swagger

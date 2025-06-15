@@ -80,21 +80,10 @@ async createContactUs(req, res, next) {
     email: Joi.string().email().optional(),
     phoneNumber: Joi.string().optional(),
     message: Joi.string().optional(),
-    // attachFile: Joi.string().optional(), // will be set later if file exists
   });
 
   try {
     let validatedBody = await validationSchema.validateAsync(req.body);
-
-    // Allow both USER and ADMIN to submit contact
-    let userResult = await findUser({
-      _id: req.userId,
-      userType: { $in: [userType.USER, userType.ADMIN] },
-    });
-
-    if (!userResult) {
-      throw apiError.notFound(responseMessage.USER_NOT_FOUND);
-    }
 
     // Process file if uploaded
     if (req.files && req.files.length > 0) {
@@ -102,7 +91,8 @@ async createContactUs(req, res, next) {
       validatedBody.attachFile = imageUrl;
     }
 
-    validatedBody.userId = userResult._id;
+    // Optional: Add createdAt timestamp
+    validatedBody.createdAt = new Date();
 
     const contactRes = await createContact(validatedBody);
 
@@ -112,6 +102,7 @@ async createContactUs(req, res, next) {
     return next(error);
   }
 }
+
 
 /**
  * @swagger
