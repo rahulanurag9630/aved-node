@@ -1330,7 +1330,7 @@ export class adminController {
 
   /**
  * @swagger
- * /admin/blogs:
+ * /admin/listPublicBlogs:
  *   get:
  *     tags:
  *       - BLOG MANAGEMENT
@@ -1946,7 +1946,52 @@ export class adminController {
   }
 
 
+  /**
+   * @swagger
+   * /admin/getBlogById:
+   *   get:
+   *     tags:
+   *       - BLOG MANAGEMENT
+   *     summary: Get a single blog by ID
+   *     description: Retrieve a specific blog using its MongoDB ID. Only ACTIVE blogs are returned.
+   *     produces:
+   *       - application/json
+   *     parameters:
+   *       - name: id
+   *         in: path
+   *         required: true
+   *         description: The ID of the blog to retrieve
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Blog retrieved successfully
+   *       404:
+   *         description: Blog not found
+   *       500:
+   *         description: Internal Server Error
+   */
+  async getBlogById(req, res, next) {
+    try {
+      const { id } = req.query;
 
+      // Optional: validate ObjectId format if you're using MongoDB
+      if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        throw apiError.invalidId("Invalid blog ID format");
+      }
+
+      const blog = await blogServices.getBlogById(id);
+
+      if (!blog || blog.status !== "ACTIVE") {
+        throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
+      }
+
+      return res.json(new response(blog, responseMessage.DATA_FOUND));
+    } catch (error) {
+      console.error("❌ Error in getBlogById --->>", error);
+      return next(error);
+    }
+  }
 
 }
 
