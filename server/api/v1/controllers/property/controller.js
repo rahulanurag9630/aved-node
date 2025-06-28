@@ -282,7 +282,7 @@ export class propertyController {
             // });
             // if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
 
-            let query = { status: "ACTIVE" };
+            let query = {};
 
             if (validatedBody.search) {
                 const regex = new RegExp(validatedBody.search, "i");
