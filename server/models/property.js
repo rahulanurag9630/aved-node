@@ -32,15 +32,12 @@ const propertySchema = new schema(
         },
         price: {
             type: Number,
-            required: true
         },
         price_min: {
             type: Number,
-            required: true
         },
         price_max: {
             type: Number,
-            required: true
         },
         apartment_number: {
             type: String
