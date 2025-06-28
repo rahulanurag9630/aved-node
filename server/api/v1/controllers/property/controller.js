@@ -118,6 +118,7 @@ export class propertyController {
             overview_ar: Joi.string().optional(),
             detailed_description: Joi.string().optional(),
             detailed_description_ar: Joi.string().optional(),
+            videoUrl: Joi.string().optional(),
             price: Joi.number().optional(),
             price_min: Joi.number().optional(),
             price_max: Joi.number().optional(),
