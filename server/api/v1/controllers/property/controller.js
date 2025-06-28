@@ -118,7 +118,9 @@ export class propertyController {
             overview_ar: Joi.string().optional(),
             detailed_description: Joi.string().optional(),
             detailed_description_ar: Joi.string().optional(),
-            price: Joi.number().required(),
+            price: Joi.number().optional(),
+            price_min: Joi.number().optional(),
+            price_max: Joi.number().optional(),
             apartment_number: Joi.string().optional(),
             no_of_bedrooms: Joi.number().optional(),
             no_of_bathrooms: Joi.number().optional(),
@@ -135,6 +137,12 @@ export class propertyController {
             images: Joi.array().items(Joi.string()).optional(),
             no_of_floors: Joi.number().optional(),
             floor_plan: Joi.array().items(
+                Joi.object({
+                    photo: Joi.string(),
+                    description: Joi.string()
+                })
+            ).optional(),
+            landmarks: Joi.array().items(
                 Joi.object({
                     photo: Joi.string(),
                     description: Joi.string()
@@ -273,7 +281,7 @@ export class propertyController {
             // });
             // if (!adminData) throw apiError.notFound(responseMessage.ADMIN_NOT_FOUND);
 
-            let query = {};
+            let query = { status: "ACTIVE" };
 
             if (validatedBody.search) {
                 const regex = new RegExp(validatedBody.search, "i");
@@ -294,8 +302,8 @@ export class propertyController {
 
             if (validatedBody.min_price || validatedBody.max_price) {
                 query.price = {};
-                if (validatedBody.min_price) query.price.$gte = validatedBody.min_price;
-                if (validatedBody.max_price) query.price.$lte = validatedBody.max_price;
+                if (validatedBody.min_price) query.price_min.$gte = validatedBody.min_price;
+                if (validatedBody.max_price) query.price_max.$lte = validatedBody.max_price;
             }
 
             // Pagination
@@ -454,7 +462,7 @@ export class propertyController {
         try {
             const validatedBody = await validationSchema.validateAsync(req.query);
 
-            const query = {};
+            const query = { status: "ACTIVE" };
 
             if (validatedBody.search) {
                 const regex = new RegExp(validatedBody.search, "i");
@@ -479,8 +487,8 @@ export class propertyController {
 
             if (validatedBody.min_price || validatedBody.max_price) {
                 query.price = {};
-                if (validatedBody.min_price) query.price.$gte = validatedBody.min_price;
-                if (validatedBody.max_price) query.price.$lte = validatedBody.max_price;
+                if (validatedBody.min_price) query.price_min.$gte = validatedBody.min_price;
+                if (validatedBody.max_price) query.price_max.$lte = validatedBody.max_price;
             }
 
             if (validatedBody.latitude && validatedBody.longitude) {

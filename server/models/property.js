@@ -34,7 +34,18 @@ const propertySchema = new schema(
             type: Number,
             required: true
         },
+        price_min: {
+            type: Number,
+            required: true
+        },
+        price_max: {
+            type: Number,
+            required: true
+        },
         apartment_number: {
+            type: String
+        },
+        videoUrl: {
             type: String
         },
         no_of_bedrooms: {
@@ -90,6 +101,10 @@ const propertySchema = new schema(
         images: [{ type: String }],
         no_of_floors: { type: Number },
         floor_plan: [{
+            photo: { type: String },
+            description: { type: String }
+        }],
+        landmarks: [{
             photo: { type: String },
             description: { type: String }
         }],
