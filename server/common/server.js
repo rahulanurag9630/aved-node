@@ -123,7 +123,7 @@ io.on("connection", (socket) => {
     console.log("initiateUserChat ===>>> ", data);
     try {
       const { senderId, receiverId, page = 1, limit = 50 } = data;
-      if(!senderId || receiverId) {
+      if (!senderId || receiverId) {
         return io.to(socket.id).emit("error", { message: "senderId or receiverId cannot be empty." });
       }
       let roomId;
@@ -182,7 +182,7 @@ io.on("connection", (socket) => {
       }
       const messageObj = {
         senderId,
-        roomId,                              
+        roomId,
         content,
         messageType,
         caption,

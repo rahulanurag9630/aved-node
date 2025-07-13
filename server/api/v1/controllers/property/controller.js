@@ -11,104 +11,123 @@ const { findUser } = userServices;
 
 export class propertyController {
     /**
- * @swagger
- * /property/addUpdateProperty:
- *   post:
- *     tags:
- *       - PROPERTY MANAGEMENT
- *     description: Create a new property or update an existing one based on the presence of an ID.
- *     produces:
- *       - application/json
- *     parameters:
- *       - name: authToken
- *         in: header
- *         required: true
- *         description: Admin authentication token
- *       - in: body
- *         name: body
- *         description: Property details
- *         required: true
- *         schema:
- *           type: object
- *           properties:
- *             id:
- *               type: string
- *               description: Property ID (if updating)
- *             property_name:
- *               type: string
- *             property_name_ar:
- *               type: string
- *             overview:
- *               type: string
- *             overview_ar:
- *               type: string
- *             detailed_description:
- *               type: string
- *             detailed_description_ar:
- *               type: string
- *             price:
- *               type: number
- *             apartment_number:
- *               type: string
- *             no_of_bedrooms:
- *               type: number
- *             no_of_bathrooms:
- *               type: number
- *             year_of_built:
- *               type: number
- *             amenities:
- *               type: array
- *               items:
- *                 type: string
- *             area_sqft:
- *               type: number
- *             parking_space:
- *               type: string
- *             property_type:
- *               type: string
- *             listing_type:
- *               type: string
- *             availability_status:
- *               type: string
- *             address:
- *               type: string
- *             latitude:
- *               type: number
- *             longitude:
- *               type: number
- *             images:
- *               type: array
- *               items:
- *                 type: string
- *             no_of_floors:
- *               type: number
- *             floor_plan:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   photo:
- *                     type: string
- *                   description:
- *                     type: string
- *             seo_meta_titles:
- *               type: string
- *             seo_meta_tags:
- *               type: string
- *             publish_status:
- *               type: string
- *               enum: [published, draft]
- *             status:
- *               type: string
- *               enum: [ACTIVE, BLOCK]
- *     responses:
- *       200:
- *         description: Property created/updated successfully.
- *       400:
- *         description: Invalid input.
- *       401:
- *         description: Unauthorized access.
- */
+    * @swagger
+    * /property/addUpdateProperty:
+    *   post:
+    *     tags:
+    *       - PROPERTY MANAGEMENT
+    *     description: Create a new property or update an existing one based on the presence of an ID.
+    *     produces:
+    *       - application/json
+    *     parameters:
+    *       - name: authToken
+    *         in: header
+    *         required: true
+    *         description: Admin authentication token
+    *       - in: body
+    *         name: body
+    *         description: Property details
+    *         required: true
+    *         schema:
+    *           type: object
+    *           properties:
+    *             id:
+    *               type: string
+    *               description: Property ID (if updating)
+    *             property_name:
+    *               type: string
+    *             property_name_ar:
+    *               type: string
+    *             overview:
+    *               type: string
+    *             overview_ar:
+    *               type: string
+    *             detailed_description:
+    *               type: string
+    *             detailed_description_ar:
+    *               type: string
+    *             videoUrl:
+    *               type: string
+    *             price:
+    *               type: number
+    *             price_min:
+    *               type: number
+    *             price_max:
+    *               type: number
+    *             apartment_number:
+    *               type: string
+    *             no_of_bedrooms:
+    *               type: number
+    *             no_of_bathrooms:
+    *               type: number
+    *             year_of_built:
+    *               type: number
+    *             amenities:
+    *               type: array
+    *               items:
+    *                 type: string
+    *             area_sqft:
+    *               type: number
+    *             parking_space:
+    *               type: string
+    *             property_type:
+    *               type: string
+    *             listing_type:
+    *               type: string
+    *             availability_status:
+    *               type: string
+    *             address:
+    *               type: string
+    *             latitude:
+    *               type: number
+    *             longitude:
+    *               type: number
+    *             images:
+    *               type: array
+    *               items:
+    *                 type: string
+    *             no_of_floors:
+    *               type: number
+    *             floor_plan:
+    *               type: array
+    *               items:
+    *                 type: object
+    *                 properties:
+    *                   photo:
+    *                     type: string
+    *                   description:
+    *                     type: string
+    *                   images:
+    *                     type: array
+    *                     items:
+    *                       type: string
+    *             landmarks:
+    *               type: array
+    *               items:
+    *                 type: object
+    *                 properties:
+    *                   photo:
+    *                     type: string
+    *                   description:
+    *                     type: string
+    *             seo_meta_titles:
+    *               type: string
+    *             seo_meta_tags:
+    *               type: string
+    *             publish_status:
+    *               type: string
+    *               enum: [published, draft, Published, Draft]
+    *             status:
+    *               type: string
+    *               enum: [ACTIVE, BLOCK, Published, Draft]
+    *     responses:
+    *       200:
+    *         description: Property created/updated successfully.
+    *       400:
+    *         description: Invalid input.
+    *       401:
+    *         description: Unauthorized access.
+    */
     async addUpdateProperty(req, res, next) {
         const validationSchema = Joi.object({
             id: Joi.string().optional(),
@@ -139,14 +158,15 @@ export class propertyController {
             no_of_floors: Joi.number().optional(),
             floor_plan: Joi.array().items(
                 Joi.object({
-                    photo: Joi.string(),
-                    description: Joi.string()
+                    photo: Joi.string().optional(),
+                    description: Joi.string().optional(),
+                    images: Joi.array().items(Joi.string()).optional()
                 })
             ).optional(),
             landmarks: Joi.array().items(
                 Joi.object({
-                    photo: Joi.string(),
-                    description: Joi.string()
+                    photo: Joi.string().optional(),
+                    description: Joi.string().optional()
                 })
             ).optional(),
             seo_meta_titles: Joi.string().optional(),
@@ -167,11 +187,9 @@ export class propertyController {
 
             let result;
             if (validatedBody.id) {
-                // Update property
                 result = await propertyServices.updateProperty(validatedBody.id, validatedBody);
                 if (!result) throw apiError.notFound(responseMessage.DATA_NOT_FOUND);
             } else {
-                // Create new property
                 result = await propertyServices.addProperty(validatedBody);
             }
 
@@ -181,6 +199,7 @@ export class propertyController {
             return next(error);
         }
     }
+
 
     /**
  * @swagger
@@ -486,8 +505,10 @@ export class propertyController {
             if (validatedBody.publish_status) query.publish_status = validatedBody.publish_status;
             if (validatedBody.city) query.city = validatedBody.city;
 
+            console.log(validatedBody.min_price, validatedBody.max_price, query.price_min)
             if (validatedBody.min_price || validatedBody.max_price) {
-                query.price = {};
+                query.price_min = {}
+                query.price_max = {}
                 if (validatedBody.min_price) query.price_min.$gte = validatedBody.min_price;
                 if (validatedBody.max_price) query.price_max.$lte = validatedBody.max_price;
             }

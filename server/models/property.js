@@ -99,7 +99,8 @@ const propertySchema = new schema(
         no_of_floors: { type: Number },
         floor_plan: [{
             photo: { type: String },
-            description: { type: String }
+            description: { type: String },
+            images: [{ type: String }]
         }],
         landmarks: [{
             photo: { type: String },
