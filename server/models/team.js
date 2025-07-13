@@ -23,6 +23,18 @@ const teamSchema = new schema(
             type: String,
             required: true
         },
+        name_ar: {
+            type: String,
+            required: true
+        },
+        position_ar: {
+            type: String,
+            required: true
+        },
+        thoughts_ar: {
+            type: String,
+            required: true
+        },
         facebook: {
             type: String,
             required: false
@@ -35,7 +47,7 @@ const teamSchema = new schema(
             type: String,
             required: false
         },
-     
+
         image: {
             type: String,
             required: false

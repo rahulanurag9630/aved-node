@@ -1457,19 +1457,21 @@ export class adminController {
     const validationSchema = Joi.object({
       id: Joi.string().allow("", null).optional(),
       name: Joi.string().required(),
+      name_ar: Joi.string().required(),
       position: Joi.string().required(),
+      position_ar: Joi.string().required(),
       thoughts: Joi.string().required(),
+      thoughts_ar: Joi.string().required(),
       facebook: Joi.string().optional().allow(""),
       instagram: Joi.string().optional().allow(""),
       linkedin: Joi.string().optional().allow(""),
-      image: Joi.string().optional(),
+      image: Joi.string().optional()
     });
 
     try {
       const { error, value: validatedBody } = validationSchema.validate(req.body);
       if (error) return next(apiError.badRequest(error.message));
 
-      // Clean up the `id` field if it's empty
       const isUpdate = validatedBody.id && validatedBody.id.trim() !== "";
       if (!isUpdate) {
         delete validatedBody.id;
@@ -1477,11 +1479,9 @@ export class adminController {
 
       let teamMember;
       if (isUpdate) {
-        // Update existing team member
         teamMember = await teamServices.updateTeam(validatedBody.id, validatedBody);
         return res.json(new response(teamMember, "Team member updated successfully"));
       } else {
-        // Add new team member
         teamMember = await teamServices.addTeam(validatedBody);
         return res.json(new response(teamMember, "Team member added successfully"));
       }
@@ -1490,6 +1490,7 @@ export class adminController {
       return next(err);
     }
   }
+
 
   /**
    * @swagger
