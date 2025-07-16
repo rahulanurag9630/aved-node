@@ -138,6 +138,7 @@ export class propertyController {
             detailed_description: Joi.string().optional(),
             detailed_description_ar: Joi.string().optional(),
             videoUrl: Joi.string().optional(),
+            brochure: Joi.string().optional(),
             price: Joi.number().optional(),
             price_min: Joi.number().optional(),
             price_max: Joi.number().optional(),
@@ -152,9 +153,11 @@ export class propertyController {
             listing_type: Joi.string().optional(),
             availability_status: Joi.string().optional(),
             address: Joi.string().optional(),
+            address_ar: Joi.string().optional(),
             latitude: Joi.number().optional(),
             longitude: Joi.number().optional(),
             images: Joi.array().items(Joi.string()).optional(),
+            partners: Joi.array().items(Joi.string()).optional(),
             no_of_floors: Joi.number().optional(),
             floor_plan: Joi.array().items(
                 Joi.object({
