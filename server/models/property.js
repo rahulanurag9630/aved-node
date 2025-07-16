@@ -79,8 +79,10 @@ const propertySchema = new schema(
             default: "ACTIVE"
         },
         address: { type: String },
+        address_ar: { type: String },
         city: { type: String },
         state: { type: String },
+        brochure: { type: String },
         latitude: { type: Number },
         longitude: { type: Number },
         // ✅ New: location field for geospatial queries
@@ -96,6 +98,7 @@ const propertySchema = new schema(
             }
         },
         images: [{ type: String }],
+        partners: [{ type: String }],
         no_of_floors: { type: Number },
         floor_plan: [{
             photo: { type: String },
