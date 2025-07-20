@@ -30,6 +30,7 @@ export default Express.Router()
   .get("/listTeam", adminController.listTeam)
   .post("/toggleBlockTeamStatus", adminController.toggleBlockTeamStatus)
   .post("/deleteTeam", adminController.deleteTeam)
+  .post("/updateTeamOrder", adminController.updateTeamOrder)
   .get("/getDashboardData", adminController.getDashboardData)
 
 

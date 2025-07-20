@@ -1698,7 +1698,7 @@ export class adminController {
       const options = {
         page: validatedBody.page,
         limit: validatedBody.limit,
-        sort: { createdAt: -1 },
+        sort: { order: 1, createdAt: -1 },
       };
 
       // Fetch paginated team members
@@ -1715,7 +1715,35 @@ export class adminController {
     }
 
   }
+  async updateTeamOrder(req, res, next) {
+    try {
+      const { orderedTeam } = req.body;
 
+      if (!Array.isArray(orderedTeam)) {
+        return res.status(400).json({
+          responseCode: 400,
+          responseMessage: "Invalid data format. 'orderedTeam' should be an array.",
+        });
+      }
+
+      // Update each member's order
+      for (const member of orderedTeam) {
+        if (!member.id || typeof member.order !== "number") continue;
+        await teamModel.findByIdAndUpdate(member.id, { order: member.order });
+      }
+
+      return res.status(200).json({
+        responseCode: 200,
+        responseMessage: "Team order updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error updating team order:", error);
+      return res.status(500).json({
+        responseCode: 500,
+        responseMessage: "Internal Server Error.",
+      });
+    }
+  };
   /**
  * @swagger
  * /admin/publicList:
@@ -1769,7 +1797,7 @@ export class adminController {
       const options = {
         page: validatedBody.page,
         limit: validatedBody.limit,
-        sort: { createdAt: -1 },
+        sort: { order: 1, createdAt: -1 },
       };
 
       const teamList = await teamServices.paginateTeams(query, options);
