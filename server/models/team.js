@@ -57,6 +57,11 @@ const teamSchema = new schema(
             enum: ["ACTIVE", "DELETE", "BLOCK"],
             default: "ACTIVE"
         },
+        order: {
+            type: Number,
+            default: 0,
+        }
+
     },
     options
 );
