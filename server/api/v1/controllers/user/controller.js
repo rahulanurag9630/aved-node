@@ -474,6 +474,51 @@ export class userController {
   }
 
   /**
+ * @swagger
+ * /user/uploadMultipleFiles:
+ *   post:
+ *     tags:
+ *       - User
+ *     summary: Upload multiple images/videos
+ *     description: Upload multiple files (images or videos) at once
+ *     consumes:
+ *       - multipart/form-data
+ *     parameters:
+ *       - in: formData
+ *         name: files
+ *         type: array
+ *         items:
+ *           type: file
+ *         description: Multiple files to upload
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Returns success message with uploaded file URLs
+ */
+  async uploadMultipleFiles(req, res, next) {
+    try {
+      const files = req.files;
+      console.log(files)
+      if (!files || !files.length) {
+        return res.json(new response([], "No files uploaded"));
+      }
+
+      let imageUrls = [];
+
+      for (const file of files) {
+        const imageUrl = await commonFunction.getImageUrl(file);
+        imageUrls.push(imageUrl);
+        await commonFunction.removeFile(file.path); // Optional: remove if needed
+      }
+
+      return res.json(new response(imageUrls, responseMessage.IMAGE_UPLOADED));
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+
+  /**
    * @swagger
    * /user/updateProfile:
    *   put:

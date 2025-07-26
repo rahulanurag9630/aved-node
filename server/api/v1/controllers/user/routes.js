@@ -11,6 +11,8 @@ export default Express.Router()
   .post("/userForgotPassword", userController.forgotPassword)
   .post("/verifyOtp", userController.verifyOtp)
   .post("/uploadFile", upload.uploadFile, userController.uploadFile)
+  .post("/uploadMultipleFiles", upload.uploadMultipleFiles, userController.uploadMultipleFiles)
+
 
   .use(auth.verifyToken)
   .get("/getUserDetails", userController.getUserDetails)
@@ -22,4 +24,3 @@ export default Express.Router()
   .post("/updateHideStatus", userController.updateHideStatus)
   .post("/changePassword", userController.changePassword)
   .post("/userResetPassword", userController.resetPassword)
-  
