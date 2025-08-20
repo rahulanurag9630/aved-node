@@ -157,6 +157,8 @@ export class propertyController {
             latitude: Joi.number().optional(),
             longitude: Joi.number().optional(),
             images: Joi.array().items(Joi.string()).optional(),
+            interiorDesign: Joi.array().items(Joi.string()).optional(),
+            exteriorDesign: Joi.array().items(Joi.string()).optional(),
             partners: Joi.array().items(Joi.string()).optional(),
             no_of_floors: Joi.number().optional(),
             floor_plan: Joi.array().items(

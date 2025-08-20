@@ -98,6 +98,8 @@ const propertySchema = new schema(
             }
         },
         images: [{ type: String }],
+        interiorDesign: [{ type: String }],
+        exteriorDesign: [{ type: String }],
         partners: [{ type: String }],
         no_of_floors: { type: Number },
         floor_plan: [{
