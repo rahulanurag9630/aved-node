@@ -159,12 +159,26 @@ export class propertyController {
             images: Joi.array().items(Joi.string()).optional(),
             interiorDesign: Joi.array().items(Joi.string()).optional(),
             exteriorDesign: Joi.array().items(Joi.string()).optional(),
+            virtualTour: Joi.string().optional(),
+
             partners: Joi.array().items(Joi.string()).optional(),
             no_of_floors: Joi.number().optional(),
             floor_plan: Joi.array().items(
                 Joi.object({
                     photo: Joi.string().optional(),
                     description: Joi.string().optional(),
+                    images: Joi.array().items(Joi.string()).optional()
+                })
+            ).optional(),
+            bathrooms: Joi.array().items(
+                Joi.object({
+                    photo: Joi.string().optional(),
+                    images: Joi.array().items(Joi.string()).optional()
+                })
+            ).optional(),
+            bedrooms: Joi.array().items(
+                Joi.object({
+                    photo: Joi.string().optional(),
                     images: Joi.array().items(Joi.string()).optional()
                 })
             ).optional(),
