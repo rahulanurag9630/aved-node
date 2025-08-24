@@ -9,6 +9,8 @@ export class UploadHandler {
     this.max_image_size = 204800;
     this.max_video_size = 2048000;
     const uploadFolder = "uploads";
+    this.uploadMultipleFiles = this.uploadMultipleFiles.bind(this);
+
     if (!fs.existsSync(uploadFolder)) {
       fs.mkdirSync(uploadFolder);
     }
@@ -65,6 +67,22 @@ export class UploadHandler {
     }).any();
     this.handleUploadError(req, res, next, upload);
   }
+  uploadMultipleFiles(req, res, next) {
+    console.log("multiples")
+    const upload = multer({
+      storage: this.storage,
+      fileFilter: function (req, file, cb) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        // Add checks if needed (like image-only)
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 10000000 * 30, // 300MB total
+      },
+    }).array("files", 10); // Accept max 10 files under fieldname "files"
+    this.handleUploadError(req, res, next, upload);
+  }
+
 }
 
 export default new UploadHandler(10);

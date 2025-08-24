@@ -98,11 +98,22 @@ const propertySchema = new schema(
             }
         },
         images: [{ type: String }],
+        interiorDesign: [{ type: String }],
+        exteriorDesign: [{ type: String }],
+        virtualTour: { type: String },
         partners: [{ type: String }],
         no_of_floors: { type: Number },
         floor_plan: [{
             photo: { type: String },
             description: { type: String },
+            images: [{ type: String }]
+        }],
+        bathrooms: [{
+            photo: { type: String },
+            images: [{ type: String }]
+        }],
+        bedrooms: [{
+            photo: { type: String },
             images: [{ type: String }]
         }],
         landmarks: [{
